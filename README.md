@@ -1,3 +1,4 @@
+[index (13).html](https://github.com/user-attachments/files/33786293/index.13.html)
 <!doctype html>
 <html lang="et">
 <head>
@@ -6,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <script>
 // Automaatne uuendus: kui serveris on uuem versioon, laadi see kohe
-window.GAME_VERSION = 'v7';
+window.GAME_VERSION = 'v9';
 (function(){
   try {
     var u = location.pathname + '?nocache=' + Date.now();
@@ -38,11 +39,12 @@ window.GAME_VERSION = 'v7';
 </head>
 <body>
 <div id="info">
-  <b>🔐 Põgenemistuba VR – Professor Nupu maja</b> <span style="opacity:.6">(v7)</span><br>
+  <b>🔐 Põgenemistuba VR – Professor Nupu maja</b> <span style="opacity:.6">(v9)</span><br>
   Questis: vajuta all <b>ENTER VR</b>.<br>
   Arvutis: <b>klõps</b> = kasuta / võta ese, <b>parem klõps</b> = pane ese maha,
   <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>Esc</b> = paus.<br>
-  <button id="tqBtn" style="margin-top:6px">📚 Õpetaja küsimused</button>
+  <button id="tqBtn" style="margin-top:6px">📚 Õpetaja küsimused</button> <button id="galBtn">🖼️ Minu pildid</button>
+  <div id="galBox" style="display:none;margin-top:6px;max-height:300px;overflow:auto"></div>
   <div id="tqBox" style="display:none;margin-top:6px">
     Üks küsimus rea kohta: <code>küsimus | õige vastus | vale | vale | vale</code><br>
     <textarea id="tqText" rows="7" cols="52" placeholder="Mis on Eesti pealinn? | Tallinn | Tartu | Pärnu | Narva"></textarea><br>
@@ -54,6 +56,7 @@ window.GAME_VERSION = 'v7';
 (() => { const b = document.getElementById('tqBtn'), box = document.getElementById('tqBox'), t = document.getElementById('tqText');
   try { t.value = localStorage.getItem('pt_questions') || ''; } catch (e) {}
   b.onclick = () => box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('galBtn').onclick = () => { const g = document.getElementById('galBox'); g.style.display = g.style.display === 'none' ? 'block' : 'none'; if (window.renderHtmlGallery) window.renderHtmlGallery(); };
   document.getElementById('tqSave').onclick = () => { try { localStorage.setItem('pt_questions', t.value); } catch (e) {}
     const n = t.value.split('\n').filter(l => l.split('|').length >= 3).length; document.getElementById('tqMsg').textContent = `Salvestatud: ${n} küsimust ✔`; };
   ['keydown', 'keyup'].forEach(ev => t.addEventListener(ev, e => e.stopPropagation()));
@@ -1509,7 +1512,9 @@ const ACH = [
   ['gears', '⚙️ Mehaanik', 'Leia ühes mängus kõik 3 kuldset hammasratast'],
   ['laser', '🕺 Laseritantsija', 'Läbi kosmos ilma ühtegi laserit puudutamata'],
   ['learn', '📚 Tarkpea', 'Läbi mäng õppimise režiimiga'],
-  ['coins20', '💰 Rikas', 'Kogu kokku 20 salamünti (kõik mängud)']
+  ['coins20', '💰 Rikas', 'Kogu kokku 20 salamünti (kõik mängud)'],
+  ['night', '🌙 Öökull', 'Läbi mäng öörežiimis'],
+  ['photo', '📸 Fotograaf', 'Tee mängus endast pilt']
 ];
 const achGot = store('pt_ach') || {};
 function unlockAch(id){ if (achGot[id]) return; achGot[id] = Date.now(); store('pt_ach', achGot); const a = ACH.find(x => x[0] === id); delay(1.2 + Object.keys(achGot).length * 0.01, () => { notify(`🏅 Uus saavutus: ${a[1]}!`, 4); sfx.win ? tone(880, 0.3, 0, 'triangle', 0.08) : 0; }); }
@@ -1523,10 +1528,11 @@ function checkAch(){
   if (st.gears >= 3) unlockAch('gears');
   if (settings.rooms >= 8 && st.zaps === 0) unlockAch('laser');
   if (settings.learn !== 'off') unlockAch('learn');
-  const tot = (store('pt_coins') || 0) + st.coins; store('pt_coins', tot); if (tot >= 20) unlockAch('coins20');
+  if (settings.night) unlockAch('night');
+  const tot = (store('pt_coins') || 0) + st.coins + (settings.diff === 'raske' ? 2 : 0); store('pt_coins', tot); if (tot >= 20) unlockAch('coins20');
 }
 function showAch(){
-  if (mode === 'menu') menuUI.visible = false;
+  if (mode === 'menu') { menuUI.visible = false; readerFromMenu = true; }
   const n = ACH.filter(a => achGot[a[0]]).length;
   openReader(`🏅 Saavutused ${n}/${ACH.length}`, ACH.map(a => `${achGot[a[0]] ? '✅' : '🔒'} ${a[1]} – ${a[2]}`).join('\n') + `\n\n🪙 Münte kokku: ${store('pt_coins') || 0}`, false);
 }
@@ -1738,6 +1744,252 @@ function requestDoor(i){
   openDoor(i);
 }
 
+
+/* =========================================================
+   📸 FOTOAPARAAT (selfie) + AVATAR + GALERII
+   ========================================================= */
+const AV_LAYER = 5;
+const AV_SHIRT = new THREE.MeshLambertMaterial({ color: 0x1e88e5 });
+const avatar = new THREE.Group(); scene.add(avatar);
+const avHead = new THREE.Group(); avatar.add(avHead);
+const avBody = new THREE.Group(); avatar.add(avBody);
+{
+  const skin = new THREE.MeshLambertMaterial({ color: 0xf1c8a8, emissive: 0x2a1a10 });
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 24, 18), skin); head.scale.set(0.95, 1.1, 1); avHead.add(head);
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.115, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.45), new THREE.MeshLambertMaterial({ color: 0x5d4037 })); hair.position.y = 0.025; hair.scale.set(1, 1.1, 1.02); avHead.add(hair);
+  const eyeW = new THREE.MeshBasicMaterial({ color: 0xffffff }), eyeB = new THREE.MeshBasicMaterial({ color: 0x1b1b1b });
+  for (const x of [-0.038, 0.038]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.02, 12, 10), eyeW); e.position.set(x, 0.02, -0.095); avHead.add(e); const p = new THREE.Mesh(new THREE.SphereGeometry(0.01, 10, 8), eyeB); p.position.set(x, 0.02, -0.112); avHead.add(p); }
+  const smile = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 16, Math.PI), new THREE.MeshBasicMaterial({ color: 0xa0412d })); smile.rotation.z = Math.PI; smile.position.set(0, -0.035, -0.1); avHead.add(smile);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), skin); nose.position.set(0, -0.005, -0.11); avHead.add(nose);
+  // VR-prillid, et oleks näha, et oled VR-is :)
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.06, 0.05), new THREE.MeshLambertMaterial({ color: 0xfafafa })); visor.position.set(0, 0.025, -0.1); visor.visible = false; avHead.add(visor); avHead.userData.visor = visor;
+  const shirt = AV_SHIRT;
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.42, 6, 14), shirt); torso.scale.set(1, 1, 0.65); torso.position.y = -0.48; avBody.add(torso);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.1, 12), skin); neck.position.y = -0.15; avBody.add(neck);
+  for (const x of [-0.2, 0.2]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.3, 4, 10), shirt); arm.position.set(x, -0.5, 0); arm.rotation.z = x > 0 ? 0.15 : -0.15; avBody.add(arm); }
+  const legs = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.6, 6, 12), new THREE.MeshLambertMaterial({ color: 0x37474f })); legs.scale.set(1, 1, 0.7); legs.position.y = -1.08; avBody.add(legs);
+}
+avatar.traverse(o => o.layers.set(AV_LAYER));
+function updateAvatar(){
+  camera.getWorldPosition(tmpV); camera.getWorldQuaternion(tmpQ);
+  avHead.position.copy(tmpV); avHead.quaternion.copy(tmpQ);
+  avHead.userData.visor.visible = renderer.xr.isPresenting;
+  const e = new THREE.Euler().setFromQuaternion(tmpQ, 'YXZ');
+  avBody.position.copy(tmpV); avBody.rotation.set(0, e.y, 0);
+}
+// kaamera ese
+const photoObj = new THREE.Group();
+{
+  const bodyM = new THREE.MeshLambertMaterial({ color: 0x263238 });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.085, 0.035), bodyM); photoObj.add(b);
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.01, 16).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x111111 })); lens.position.set(0.045, 0.028, 0.019); photoObj.add(lens);
+  const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.008, 12), new THREE.MeshLambertMaterial({ color: 0xe53935 })); btn.position.set(0.045, 0.046, 0); photoObj.add(btn);
+  const strap = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.03, 0.02), new THREE.MeshLambertMaterial({ color: 0xffb300 })); strap.position.set(-0.07, 0.03, 0); photoObj.add(strap);
+}
+const PREV_W = 256, PREV_H = 192;
+const prevRT = new THREE.WebGLRenderTarget(PREV_W, PREV_H);
+const camScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.075), new THREE.MeshBasicMaterial({ map: prevRT.texture })); camScreen.position.set(-0.005, -0.002, 0.0185); photoObj.add(camScreen);
+const photoCam = new THREE.PerspectiveCamera(72, 4 / 3, 0.05, 200); photoCam.position.set(0.045, 0.028, 0.03); photoCam.rotation.y = Math.PI; photoObj.add(photoCam);
+photoCam.layers.enable(AV_LAYER);
+finishItem(photoObj, { item: 'camera', holdPos: V3(0, 0.02, -0.02), holdRot: new THREE.Euler(0.15, 0, 0) });
+items.camera = { obj: photoObj, home: roomG[0], pos: V3(0, -5, 0), rotY: 0, hidden: true };
+function giveCamera(){
+  closePause();
+  const h = xrHands.find(x => x.connected && x.handedness === 'right') || xrHands.find(x => x.connected) || mouseHand;
+  if (h.held === photoObj) return;
+  if (h.held) dropFall(h);
+  grab(h, photoObj, true); h.bySqueeze = false;
+  notify(renderer.xr.isPresenting ? '📸 Kaamera käes! Ekraanilt näed ennast. Pildista: päästik või näpistus.' : '📸 Kaamera käes! Klõps = pildista, parem klõps = pane maha.', 4);
+}
+let prevTick = 0;
+function renderCam(target){
+  const xrOn = renderer.xr.enabled, oldT = renderer.getRenderTarget();
+  renderer.xr.enabled = false; scene.updateMatrixWorld();
+  camScreen.visible = false; renderer.setRenderTarget(target); renderer.clear(); renderer.render(scene, photoCam);
+  renderer.setRenderTarget(oldT); renderer.xr.enabled = xrOn; camScreen.visible = true;
+}
+function updatePhotoCam(){
+  updateAvatar();
+  if (!isHeld(photoObj)) return;
+  if (++prevTick % 2) return;
+  renderCam(prevRT);
+}
+const PHOTO_W = 640, PHOTO_H = 480, photoRT = new THREE.WebGLRenderTarget(PHOTO_W, PHOTO_H);
+function loadPhotos(){ try { return JSON.parse(localStorage.getItem('pt_photos') || '[]'); } catch (e) { return []; } }
+function takePhoto(){
+  updateAvatar(); renderCam(photoRT);
+  const px = new Uint8Array(PHOTO_W * PHOTO_H * 4); renderer.readRenderTargetPixels(photoRT, 0, 0, PHOTO_W, PHOTO_H, px);
+  const cv = document.createElement('canvas'); cv.width = PHOTO_W; cv.height = PHOTO_H; const c = cv.getContext('2d'), img = c.createImageData(PHOTO_W, PHOTO_H);
+  for (let y = 0; y < PHOTO_H; y++) img.data.set(px.subarray((PHOTO_H - 1 - y) * PHOTO_W * 4, (PHOTO_H - y) * PHOTO_W * 4), y * PHOTO_W * 4);
+  c.putImageData(img, 0, 0);
+  c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(0, PHOTO_H - 30, PHOTO_W, 30); c.fillStyle = '#ffd54f'; c.font = 'bold 18px sans-serif'; c.fillText('🔐 Põgenemistuba VR • ' + new Date().toLocaleDateString('et-EE'), 10, PHOTO_H - 10);
+  const url = cv.toDataURL('image/jpeg', 0.75);
+  const list = loadPhotos(); list.unshift(url); while (list.length > 12) list.pop();
+  for (let n = list.length; n > 0; n--) { try { localStorage.setItem('pt_photos', JSON.stringify(list.slice(0, n))); break; } catch (e) {} }
+  // välk
+  camScreen.material.map = null; camScreen.material.color.set(0xffffff); camScreen.material.needsUpdate = true;
+  delay(0.15, () => { camScreen.material.map = prevRT.texture; camScreen.material.needsUpdate = true; });
+  tone(2400, 0.04, 0, 'square', 0.06); tone(1200, 0.06, 0.05, 'square', 0.05);
+  for (const h of xrHands) if (h.held === photoObj) pulse(h, 0.6, 50);
+  notify('📸 Klõps! Pilt salvestatud (menüü → 🖼️ Pildid)', 3);
+  unlockAch('photo'); renderHtmlGallery();
+}
+// galerii VR-is
+const galUI = new THREE.Group(); galUI.visible = false; scene.add(galUI);
+const galPanel = new CanvasPlane(1.5, 1.05, 600, true); galUI.add(galPanel.mesh); makeIA(galPanel.mesh, { ui: true, noHover: true });
+{ const b = makeButton('✖ Sulge', 0.4, 0.1, () => { galUI.visible = false; if (mode === 'menu') menuUI.visible = true; }, { color: '#455a64', fs: 0.42 }); b.position.set(0, -0.6, 0.01); galUI.add(b); }
+function showGallery(){
+  const list = loadPhotos().slice(0, 6), imgs = list.map(u => { const i = new Image(); i.src = u; return i; });
+  const draw = () => galPanel.draw((c, W, H) => {
+    panelBg(c, W, H); c.fillStyle = '#ffd54f'; c.textAlign = 'center'; c.font = `bold ${H * 0.07}px ${FONT}`; c.fillText('🖼️ Minu pildid', W / 2, H * 0.08);
+    if (!list.length) { c.fillStyle = '#fff'; c.font = `${H * 0.045}px ${FONT}`; c.fillText('Pilte veel pole. Mängus: paus → 📸 Kaamera', W / 2, H * 0.5); return; }
+    imgs.forEach((im, i) => { const cw = W * 0.3, ch = cw * 0.75, x = W * 0.035 + (i % 3) * (cw + W * 0.025), y = H * 0.15 + Math.floor(i / 3) * (ch + H * 0.03); if (im.complete) c.drawImage(im, x, y, cw, ch); c.strokeStyle = '#fff'; c.lineWidth = 3; c.strokeRect(x, y, cw, ch); });
+    c.fillStyle = '#b0bec5'; c.font = `${H * 0.035}px ${FONT}`; c.fillText('Pilte saad alla laadida arvutis või Questi brauseris (väljaspool VR-i): nupp "🖼️ Minu pildid"', W / 2, H * 0.96);
+  });
+  imgs.forEach(i => i.onload = draw); draw();
+  menuUI.visible = false; placeInFront(galUI, 1.4, -0.05); galUI.visible = true;
+}
+window.renderHtmlGallery = () => renderHtmlGallery();
+function renderHtmlGallery(){
+  const box = document.getElementById('galBox'); if (!box) return;
+  const list = loadPhotos();
+  box.innerHTML = list.length ? list.map((u, i) => `<a href="${u}" download="pogenemistuba_${i + 1}.jpg"><img src="${u}" style="width:130px;margin:3px;border-radius:6px;border:2px solid #fff"></a>`).join('') + '<br><small>Klõpsa pildil, et alla laadida.</small> <button id="galClear">🗑️ Kustuta kõik</button>' : 'Pilte veel pole.';
+  const cl = document.getElementById('galClear'); if (cl) cl.onclick = () => { if (confirm('Kustuta kõik pildid?')) { localStorage.removeItem('pt_photos'); renderHtmlGallery(); } };
+}
+
+/* =========================================================
+   🌙 ÖÖREŽIIM: kõik pime, ainult taskulamp
+   ========================================================= */
+const nightSpot = new THREE.SpotLight(0xfff2d0, 0, 14, 0.42, 0.55, 1.2); scene.add(nightSpot); scene.add(nightSpot.target);
+const NIGHT_MATS = ['ceil', 'labCeil', 'stars', 'darkCeil', 'greenCeil', 'retroCeil', 'playCeil'].map(k => M[k]).filter(m => m && m.color);
+NIGHT_MATS.forEach(m => m.userData.dayColor = m.color.clone());
+function updateNight(){
+  const on = settings.night && (mode === 'play' || mode === 'pause' || mode === 'read');
+  NIGHT_MATS.forEach(m => { if (m === M.ceil && !on) return; if (on) m.color.copy(m.userData.dayColor).multiplyScalar(0.06); else m.color.copy(m.userData.dayColor); });
+  if (!on) { nightSpot.intensity = 0; return; }
+  ceilLight.intensity *= 0.04; labLight.intensity *= 0.04; hemi.intensity = Math.min(hemi.intensity, 0.07); moon.intensity = 0.03;
+  const h = xrHands.find(x => x.connected && x.handedness === 'right') || xrHands.find(x => x.connected);
+  if (h) { h.ctrl.getWorldPosition(tmpV); h.ctrl.getWorldQuaternion(tmpQ); }
+  else { camera.getWorldPosition(tmpV); camera.getWorldQuaternion(tmpQ); tmpV.add(tmpD.set(0.12, -0.12, 0).applyQuaternion(tmpQ)); }
+  nightSpot.position.copy(tmpV); nightSpot.target.position.copy(tmpV).add(tmpD.set(0, 0, -1).applyQuaternion(tmpQ)); nightSpot.intensity = 35;
+}
+
+
+/* =========================================================
+   🛒 POOD: kindad, riided, asjad
+   ========================================================= */
+const SHOP = {
+  glove: [['g0', 'Tavalised', 0, { c: 0xf1c8a8, e: 0x3a2418 }], ['g1', '🟡 Kuldsed', 3, { c: 0xffd54f, e: 0x6d4c00 }], ['g2', '🥊 Boksikindad', 3, { c: 0xd32f2f, e: 0x300000 }], ['g3', '🧤 Talvekindad', 2, { c: 0x43a047, e: 0x0a2a0a }],
+    ['g4', '🤖 Robot', 4, { c: 0xb0bec5, e: 0x1a237e }], ['g5', '👻 Kummitus', 4, { c: 0xffffff, e: 0x445566, o: 0.35 }], ['g6', '💎 Kristall', 5, { c: 0x80deea, e: 0x00838f, o: 0.6 }], ['g7', '🔥 Tuli', 5, { c: 0xff7043, e: 0xff3d00 }]],
+  shirt: [['s0', 'Sinine särk', 0, { c: 0x1e88e5 }], ['s1', 'Punane särk', 2, { c: 0xe53935 }], ['s2', 'Must pusa', 2, { c: 0x212121 }], ['s3', 'Triibuline', 3, { tex: 'stripe' }], ['s4', '🦸 Superkangelane', 5, { tex: 'hero' }], ['s5', '👑 Kuldne', 6, { c: 0xffc107, e: 0x553300 }]],
+  hat: [['h0', 'Ilma mütsita', 0, {}], ['h1', '🧶 Talvemüts', 2, {}], ['h2', '🎉 Peomüts', 2, {}], ['h3', '🕵️ Detektiiv', 4, {}], ['h4', '🏴‍☠️ Piraat', 4, {}], ['h5', '👑 Kroon', 6, {}], ['h6', '🚀 Kosmosekiiver', 6, {}]],
+  trail: [['t0', 'Jälg puudub', 0, {}], ['t1', '✨ Sädemed', 4, { col: 0xfff59d }], ['t2', '⭐ Tähed', 4, { col: 0xffd54f, star: true }], ['t3', '🫧 Mullid', 4, { col: 0xb3e5fc, ring: true }], ['t4', '🌈 Vikerkaar', 6, { rainbow: true }]],
+  light: [['l0', 'Soe valgus', 0, { c: 0xfff2d0 }], ['l1', '🔴 Punane', 2, { c: 0xff5252 }], ['l2', '🟢 Roheline', 2, { c: 0x69f0ae }], ['l3', '🔵 Sinine', 2, { c: 0x64b5f6 }], ['l4', '🌈 Vikerkaar', 5, { rainbow: true }]]
+};
+const SHOP_TABS = [['glove', '🧤 Kindad'], ['shirt', '👕 Riided'], ['hat', '🎩 Mütsid'], ['trail', '✨ Jäljed'], ['light', '🔦 Lamp']];
+const shopData = Object.assign({ owned: { g0: 1, s0: 1, h0: 1, t0: 1, l0: 1 }, eq: { glove: 'g0', shirt: 's0', hat: 'h0', trail: 't0', light: 'l0' } }, store('pt_shop') || {});
+const wallet = () => (store('pt_coins') || 0) - (store('pt_spent') || 0);
+const shopItem = id => { for (const k in SHOP) for (const it of SHOP[k]) if (it[0] === id) return it; return null; };
+// mütsid avatarile
+const HATS = {};
+{
+  const L = (m, ...a) => { const o = new THREE.Mesh(...a); return o; };
+  const mk = (geo, col, x, y, z, g, extra = {}) => { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial(Object.assign({ color: col }, extra))); m.position.set(x, y, z); g.add(m); return m; };
+  let g;
+  g = HATS.h1 = new THREE.Group(); mk(new THREE.SphereGeometry(0.122, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), 0xd32f2f, 0, 0.03, 0, g).scale.y = 1.15; mk(new THREE.CylinderGeometry(0.124, 0.124, 0.03, 20), 0xffffff, 0, 0.035, 0, g); mk(new THREE.SphereGeometry(0.035, 12, 10), 0xffffff, 0, 0.18, 0, g);
+  g = HATS.h2 = new THREE.Group(); mk(new THREE.ConeGeometry(0.07, 0.2, 16), 0x8e24aa, 0, 0.2, 0, g); mk(new THREE.SphereGeometry(0.022, 10, 8), 0xffeb3b, 0, 0.31, 0, g);
+  g = HATS.h3 = new THREE.Group(); mk(new THREE.CylinderGeometry(0.17, 0.17, 0.012, 24), 0x6d4c41, 0, 0.09, 0, g); mk(new THREE.CylinderGeometry(0.1, 0.115, 0.1, 20), 0x6d4c41, 0, 0.14, 0, g); mk(new THREE.CylinderGeometry(0.116, 0.116, 0.02, 20), 0x212121, 0, 0.105, 0, g);
+  g = HATS.h4 = new THREE.Group(); { const b = mk(new THREE.CylinderGeometry(0.2, 0.2, 0.012, 3), 0x111111, 0, 0.1, 0, g); b.rotation.y = Math.PI / 6; } mk(new THREE.CylinderGeometry(0.08, 0.11, 0.1, 16), 0x111111, 0, 0.15, 0, g); mk(new THREE.SphereGeometry(0.025, 10, 8), 0xffffff, 0, 0.15, -0.095, g);
+  g = HATS.h5 = new THREE.Group(); mk(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 20, 1, true), 0xffc107, 0, 0.13, 0, g, { side: THREE.DoubleSide, emissive: 0x553300 }); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; mk(new THREE.ConeGeometry(0.018, 0.05, 6), 0xffc107, Math.cos(a) * 0.088, 0.175, Math.sin(a) * 0.088, g, { emissive: 0x553300 }); } mk(new THREE.SphereGeometry(0.014, 8, 6), 0xe53935, 0, 0.13, -0.092, g);
+  g = HATS.h6 = new THREE.Group(); mk(new THREE.SphereGeometry(0.18, 24, 18), 0xbbdefb, 0, 0, 0, g, { transparent: true, opacity: 0.25, depthWrite: false }); mk(new THREE.TorusGeometry(0.15, 0.025, 8, 24).rotateX(Math.PI / 2), 0xeceff1, 0, -0.14, 0, g);
+  for (const k in HATS) { HATS[k].visible = false; avHead.add(HATS[k]); HATS[k].traverse(o => o.layers.set(AV_LAYER)); }
+}
+const SHIRT_TEX = {
+  stripe: canvasTex(128, 128, (c, W, H) => { for (let y = 0; y < H; y += 16) { c.fillStyle = (y / 16) % 2 ? '#ffffff' : '#1565c0'; c.fillRect(0, y, W, 16); } }),
+  hero: canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#c62828'; c.fillRect(0, 0, W, H); c.fillStyle = '#ffeb3b'; c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 22 : 50, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(W * 0.25 + Math.cos(a) * r, H * 0.45 + Math.sin(a) * r); } c.fill(); c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 22 : 50, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(W * 0.75 + Math.cos(a) * r, H * 0.45 + Math.sin(a) * r); } c.fill(); })
+};
+function applyLooks(){
+  const g = shopItem(shopData.eq.glove)[3];
+  for (const m of [skinM]) { m.color.setHex(g.c); m.emissive.setHex(g.e); m.transparent = !!g.o; m.opacity = g.o || 1; m.needsUpdate = true; }
+  xrHands.forEach(h => h.skinDone = null);
+  const sh = shopItem(shopData.eq.shirt)[3];
+  AV_SHIRT.map = sh.tex ? SHIRT_TEX[sh.tex] : null; AV_SHIRT.color.setHex(sh.tex ? 0xffffff : sh.c); AV_SHIRT.emissive.setHex(sh.e || 0); AV_SHIRT.needsUpdate = true;
+  for (const k in HATS) HATS[k].visible = k === shopData.eq.hat;
+  const l = shopItem(shopData.eq.light)[3]; if (!l.rainbow) { nightSpot.color.setHex(l.c); torchSpot.color.setHex(l.c); }
+}
+function skinRealHands(){
+  const g = shopItem(shopData.eq.glove)[3];
+  for (const h of xrHands) {
+    if (!h.isHand || h.skinDone === shopData.eq.glove) continue;
+    const mc = h.handModel && h.handModel.motionController, mesh = mc && mc.handMesh; if (!mesh || !mesh.material) continue;
+    const m = mesh.material; m.color.setHex(g.c); if (m.emissive) m.emissive.setHex(g.e); m.transparent = !!g.o; m.opacity = g.o || 1; m.needsUpdate = true; h.skinDone = shopData.eq.glove;
+  }
+}
+// jäljed
+const trailTex = {
+  glow: canvasTex(64, 64, (c, W, H) => { const g = c.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }),
+  star: canvasTex(64, 64, (c, W, H) => { c.fillStyle = '#fff'; c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 12 : 30, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } c.fill(); }),
+  ring: canvasTex(64, 64, (c, W, H) => { c.strokeStyle = '#fff'; c.lineWidth = 4; c.beginPath(); c.arc(32, 32, 26, 0, 7); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.arc(22, 22, 6, 0, 7); c.fill(); })
+};
+const parts = Array.from({ length: 140 }, () => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: trailTex.glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sp.visible = false; sp.userData = { life: 0, v: new THREE.Vector3() }; scene.add(sp); return sp; });
+let partI = 0, trailHue = 0;
+const trailLast = new Map();
+function updateTrails(dt){
+  for (const p of parts) { if (!p.visible) continue; const u = p.userData; u.life -= dt; if (u.life <= 0) { p.visible = false; continue; } p.position.addScaledVector(u.v, dt); p.material.opacity = Math.min(1, u.life * 1.5); }
+  const T = shopItem(shopData.eq.trail)[3]; if (shopData.eq.trail === 't0' || mode === 'menu') return;
+  trailHue = (trailHue + dt * 0.5) % 1;
+  const srcs = xrHands.filter(h => h.connected).map(h => h); if (!renderer.xr.isPresenting) srcs.push(mouseHand);
+  for (const h of srcs) {
+    const p = h.kind === 'xr' ? handPoint(h, V3(0, 0, 0)) : h.holder.getWorldPosition(V3(0, 0, 0));
+    const last = trailLast.get(h); trailLast.set(h, p.clone()); if (!last) continue;
+    const d = p.distanceTo(last); if (d / Math.max(dt, 1e-3) < 0.35) continue;
+    const n = Math.min(3, Math.ceil(d / 0.03));
+    for (let k = 0; k < n; k++) {
+      const sp = parts[partI = (partI + 1) % parts.length], u = sp.userData;
+      sp.position.copy(last).lerp(p, k / n); sp.visible = true; u.life = 0.9;
+      sp.material.map = T.star ? trailTex.star : T.ring ? trailTex.ring : trailTex.glow;
+      sp.material.blending = T.ring ? THREE.NormalBlending : THREE.AdditiveBlending;
+      sp.material.color.set(T.rainbow ? new THREE.Color().setHSL((trailHue + k * 0.05) % 1, 1, 0.6) : T.col);
+      const sz = T.ring ? 0.025 + rand() * 0.02 : 0.03 + rand() * 0.02; sp.scale.set(sz, sz, 1);
+      u.v.set((rand() - 0.5) * 0.15, T.ring ? 0.25 : (rand() - 0.5) * 0.15, (rand() - 0.5) * 0.15);
+      sp.material.needsUpdate = true;
+    }
+  }
+  const L = shopItem(shopData.eq.light)[3]; if (L.rainbow) { const c = new THREE.Color().setHSL(trailHue, 1, 0.65); nightSpot.color.copy(c); torchSpot.color.copy(c); }
+}
+// poe aken
+const shopUI = new THREE.Group(); shopUI.visible = false; scene.add(shopUI);
+const shopPanel = new CanvasPlane(1.6, 1.2, 600, true); shopUI.add(shopPanel.mesh); makeIA(shopPanel.mesh, { ui: true, noHover: true });
+let shopTab = 'glove';
+const tabBtns = SHOP_TABS.map(([k, l], i) => { const b = makeButton(l, 0.29, 0.085, () => { shopTab = k; drawShop(); }, { fs: 0.42 }); b.position.set(-0.62 + i * 0.31, 0.37, 0.01); shopUI.add(b); return b; });
+const itemBtns = Array.from({ length: 9 }, (_, i) => { const b = makeButton('-', 0.46, 0.11, () => {}, { fs: 0.36 }); b.position.set(-0.5 + (i % 3) * 0.5, 0.2 - Math.floor(i / 3) * 0.15, 0.01); shopUI.add(b); return b; });
+{ const b = makeButton('✖ Tagasi', 0.4, 0.1, () => { shopUI.visible = false; if (mode === 'menu') { menuUI.visible = true; paintOpts(); } }, { color: '#455a64', fs: 0.42 }); b.position.set(0, -0.5, 0.01); shopUI.add(b); }
+function shopClick(it){
+  const [id, name, price] = it, cat = shopTab;
+  if (!shopData.owned[id]) {
+    if (wallet() < price) { sfx.bad(); notify(`Vaja on ${price} 🪙 – sul on ${wallet()}. Kogu mänguse salamünte!`, 3); return; }
+    store('pt_spent', (store('pt_spent') || 0) + price); shopData.owned[id] = 1; sweep(600, 1400, 0.25, 'sine', 0.08); notify(`Ostetud: ${name}! 🎉`, 2.5);
+  } else tone(500, 0.05, 0, 'triangle', 0.08);
+  shopData.eq[cat] = id; store('pt_shop', shopData); applyLooks(); drawShop();
+}
+function drawShop(){
+  shopPanel.draw((c, W, H) => {
+    panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.07}px ${FONT}`; c.fillText(`🛒 Pood • 🪙 ${wallet()}`, W / 2, H * 0.07);
+    c.fillStyle = '#b0bec5'; c.font = `${H * 0.03}px ${FONT}`;
+    c.fillText('🪙 Mündid saad mängu lõpus • raskel tasemel +2', W / 2, H * 0.76); c.fillText('Riideid ja mütse näed 📸 selfie-kaameraga (paus → Kaamera)', W / 2, H * 0.81);
+  });
+  tabBtns.forEach((b, i) => b.userData.paint(SHOP_TABS[i][0] === shopTab ? '#e65100' : '#37474f', undefined, SHOP_TABS[i][0] === shopTab));
+  const list = SHOP[shopTab];
+  itemBtns.forEach((b, i) => {
+    const it = list[i]; b.visible = !!it; if (!it) return;
+    const own = shopData.owned[it[0]], eq = shopData.eq[shopTab] === it[0];
+    b.userData.ia.onClick = () => shopClick(it);
+    b.userData.paint(eq ? '#2e7d32' : own ? '#1565c0' : wallet() >= it[2] ? '#6a1b9a' : '#424242', `${eq ? '✔ ' : ''}${it[1]}${own ? '' : `  🪙${it[2]}`}`, eq);
+  });
+}
+function showShop(){ menuUI.visible = false; drawShop(); placeInFront(shopUI, 1.4, -0.05); shopUI.visible = true; }
+
 /* =========================================================
    KASUTAJALIIDES
    ========================================================= */
@@ -1789,7 +2041,8 @@ function openReader(title, text, paper = true){
   placeInFront(readerUI, 0.9, -0.08); readerUI.visible = true;
 }
 function openView(drawFn){ readerPanel.draw(drawFn); placeInFront(readerUI, 0.9, -0.08); readerUI.visible = true; }
-function closeReader(){ readerUI.visible = false; if (mode === 'menu' && !menuUI.visible) menuUI.visible = true; }
+let readerFromMenu = false;
+function closeReader(){ readerUI.visible = false; if (readerFromMenu) { readerFromMenu = false; if (mode === 'menu') menuUI.visible = true; } }
 
 /* ---------- seaded + peamenüü ---------- */
 const DIFF = {
@@ -1797,7 +2050,7 @@ const DIFF = {
   tavaline: { label: 'Tavaline', hints: 5, melody: 5, colors: 2, maxCount: 3 },
   raske: { label: 'Raske', hints: 2, melody: 6, colors: 3, maxCount: 3 }
 };
-const settings = Object.assign({ diff: 'tavaline', timer: 0, music: true, rooms: 3, learn: 'off' }, store('pt_settings') || {});
+const settings = Object.assign({ diff: 'tavaline', timer: 0, music: true, rooms: 3, learn: 'off', night: false }, store('pt_settings') || {});
 if (!DIFF[settings.diff]) settings.diff = 'tavaline';
 settings.rooms = clamp(settings.rooms | 0 || 3, 1, 8);
 const best = store('pt_best') || {};
@@ -1814,35 +2067,39 @@ function drawMenu(){
     c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.065}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.62)); c.fillStyle = '#78909c'; c.font = `${H * 0.025}px ${FONT}`; c.textAlign = 'right'; c.fillText(window.GAME_VERSION || '', W * 0.97, H * 0.05); c.textAlign = 'center';
     c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Iga mäng on erinev • 🪙 salamündid • 🏅 saavutused • pultidega või paljaste kätega', W / 2, H * mY(0.545));
     c.fillStyle = '#fff'; c.textAlign = 'left'; c.font = `bold ${H * 0.033}px ${FONT}`;
-    c.fillText('Raskusaste', W * 0.03, H * mY(ROW.diff)); c.fillText('Taimer', W * 0.03, H * mY(ROW.timer)); c.fillText('Tubade arv', W * 0.03, H * mY(ROW.rooms)); c.fillText('Õppimine', W * 0.03, H * mY(ROW.learn)); c.fillText('Muusika', W * 0.03, H * mY(ROW.music));
+    c.fillText('Raskusaste', W * 0.03, H * mY(ROW.diff)); c.fillText('Taimer', W * 0.03, H * mY(ROW.timer)); c.fillText('Tubade arv', W * 0.03, H * mY(ROW.rooms)); c.fillText('Õppimine', W * 0.03, H * mY(ROW.learn)); c.fillText('Muu', W * 0.03, H * mY(ROW.music));
     c.textAlign = 'center'; c.fillStyle = '#b0bec5'; c.font = `${H * 0.028}px ${FONT}`;
     const b = best[bestKey()];
     c.fillText(b ? `🏆 Parim aeg (${DIFF[settings.diff].label}, ${settings.rooms} tuba): ${fmtTime(b.t)} • ${'★'.repeat(b.s)}` : `🏆 Parimat aega (${DIFF[settings.diff].label}, ${settings.rooms} tuba) veel pole`, W / 2, H * mY(-0.17));
     c.fillStyle = "#90a4ae"; c.font = `${H * 0.019}px ${FONT}`;
-    c.fillText('PULDID: päästik = kasuta/võta • külgnupp = haara • vasak kang = liigu • parem kang = pööra • Y/B = paus', W / 2, H * mY(-0.5));
+    // PULDID: päästik = kasuta/võta • külgnupp = haara • vasak kang = liigu • parem kang = pööra • Y/B = paus', W / 2, H * mY(-0.5));
     c.fillText('KÄED: näpista õhku ja tõmba = liigu • näpista põrandale = teleport • näpista = võta • vajuta nuppe sõrmega • vasaku randme ⏸ nupp = paus', W / 2, H * mY(-0.55));
     c.fillText('Õpetaja küsimused saab sisestada arvutis (nupp "📚 Õpetaja küsimused" lehe ülaosas).', W / 2, H * mY(-0.6));
   });
 }
-const optBtns = { diff: [], timer: [], rooms: [], learn: [], music: [] };
+const optBtns = { diff: [], timer: [], rooms: [], learn: [], music: [], night: [] };
 function paintOpts(){
   optBtns.diff.forEach(b => b.userData.paint(b.userData.val === settings.diff ? '#2e7d32' : '#37474f', undefined, b.userData.val === settings.diff));
   optBtns.timer.forEach(b => b.userData.paint(b.userData.val === settings.timer ? '#1565c0' : '#37474f', undefined, b.userData.val === settings.timer));
   optBtns.rooms.forEach(b => b.userData.paint(b.userData.val === settings.rooms ? '#e65100' : '#37474f', undefined, b.userData.val === settings.rooms));
   optBtns.learn.forEach(b => b.userData.paint(b.userData.val === settings.learn ? '#00838f' : '#37474f', undefined, b.userData.val === settings.learn));
   optBtns.music[0].userData.paint(settings.music ? '#6a1b9a' : '#37474f', settings.music ? '🎵 Sees' : '🔇 Väljas', settings.music);
+  optBtns.night[0].userData.paint(settings.night ? '#1a237e' : '#37474f', settings.night ? '🌙 Öö: SEES' : '☀️ Öö: väljas', settings.night);
   drawMenu(); store('pt_settings', settings);
 }
 const addOpt = (key, val, label, x, y, w) => { const b = makeButton(label, w, 0.085, () => { settings[key] = val; paintOpts(); }, { fs: 0.42 }); b.userData.val = val; b.position.set(x, y, 0.01); menuUI.add(b); optBtns[key].push(b); };
 [['kerge', '🙂 Kerge'], ['tavaline', '😐 Tavaline'], ['raske', '😈 Raske']].forEach(([v, l], i) => addOpt('diff', v, l, -0.25 + i * 0.36, ROW.diff, 0.33));
 [[0, '⏳ Väljas'], [30, '30 min'], [45, '45 min']].forEach(([v, l], i) => addOpt('timer', v, l, -0.25 + i * 0.36, ROW.timer, 0.33));
 for (let n = 1; n <= 8; n++) addOpt('rooms', n, n === 7 ? '7🌊' : n === 8 ? '8🚀' : String(n), -0.38 + (n - 1) * 0.145, ROW.rooms, n >= 7 ? 0.14 : 0.125);
-{ const b = makeButton('🌊 Otse vette', 0.34, 0.085, () => startAt(6), { color: '#00838f', fs: 0.42 }); b.position.set(0.13, ROW.music, 0.01); menuUI.add(b); }
-{ const b = makeButton('🚀 Otse kosmosesse', 0.4, 0.085, () => startAt(7), { color: '#283593', fs: 0.42 }); b.position.set(0.53, ROW.music, 0.01); menuUI.add(b); }
+{ const b = makeButton('🌊 Otse vette', 0.29, 0.085, () => startAt(6), { color: '#00838f', fs: 0.42 }); b.position.set(0.26, ROW.music, 0.01); menuUI.add(b); }
+{ const b = makeButton('🚀 Otse kosmosesse', 0.36, 0.085, () => startAt(7), { color: '#283593', fs: 0.42 }); b.position.set(0.61, ROW.music, 0.01); menuUI.add(b); }
 LEARN.forEach(([v, l], i) => addOpt('learn', v, l, -0.36 + i * 0.235, ROW.learn, 0.22));
-{ const b = makeButton('🎵 Sees', 0.33, 0.085, () => { settings.music = !settings.music; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.25, ROW.music, 0.01); menuUI.add(b); optBtns.music.push(b); }
+{ const b = makeButton('🎵 Sees', 0.22, 0.085, () => { settings.music = !settings.music; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.31, ROW.music, 0.01); menuUI.add(b); optBtns.music.push(b); }
+{ const b = makeButton('☀️ Öö', 0.27, 0.085, () => { settings.night = !settings.night; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.04, ROW.music, 0.01); menuUI.add(b); optBtns.night.push(b); }
 { const b = makeButton('▶ Alusta', 0.55, 0.13, () => newGame(), { color: '#e65100', fs: 0.45 }); b.position.set(0, -0.33, 0.01); menuUI.add(b); }
 { const b = makeButton('🏅 Saavutused', 0.4, 0.1, () => showAch(), { color: '#6a1b9a', fs: 0.42 }); b.position.set(-0.55, -0.33, 0.01); menuUI.add(b); }
+{ const b = makeButton('🖼️ Pildid', 0.36, 0.1, () => showGallery(), { color: '#00695c', fs: 0.42 }); b.position.set(0.55, -0.33, 0.01); menuUI.add(b); }
+{ const b = makeButton('🛒 Pood: kindad, riided, asjad', 0.75, 0.085, () => showShop(), { color: '#c2185b', fs: 0.42 }); b.position.set(0, -0.445, 0.01); menuUI.add(b); }
 paintOpts();
 const pauseUI = new THREE.Group(); pauseUI.visible = false; scene.add(pauseUI);
 const pausePanel = new CanvasPlane(0.9, 0.36, 700, true); pausePanel.mesh.position.y = 0.4; pauseUI.add(pausePanel.mesh); makeIA(pausePanel.mesh, { ui: true, noHover: true });
@@ -1851,7 +2108,8 @@ const pauseBtns = [
   ['💡 Vihje', '#f57f17', () => { closePause(); showHint(); }],
   ['🔁 Uus mäng', '#1565c0', () => newGame()],
   ['🏠 Peamenüü', '#455a64', () => goMenu()],
-  ['🚪 Välju VR-ist', '#b71c1c', () => exitVR()]
+  ['🚪 Välju VR-ist', '#b71c1c', () => exitVR()],
+  ['📸 Kaamera', '#6a1b9a', () => giveCamera()]
 ].map(([l, col, fn], i) => { const b = makeButton(l, 0.56, 0.11, fn, { color: col, fs: 0.42 }); b.position.set(0, 0.15 - i * 0.13, 0.01); pauseUI.add(b); return b; });
 const endUI = new THREE.Group(); endUI.visible = false; scene.add(endUI);
 const endPanel = new CanvasPlane(1.1, 0.72, 800, true); endPanel.mesh.position.y = 0.12; endUI.add(endPanel.mesh); makeIA(endPanel.mesh, { ui: true, noHover: true });
@@ -1872,7 +2130,7 @@ const RIDDLES = [
   ['Mis arv tuleb järgmisena: 2, 4, 6, …?', 8],
   ['Mis on pool kümnest pluss neli?', 9]
 ];
-function startText(){ const n = settings.rooms; return `Tere, uurija! 🕵️\n\nLukustasin su oma majja. ${n > 1 ? `Sul tuleb läbida ${n} tuba – iga uks avaneb isemoodi.` : 'Pääse sellest toast välja!'}\n\nSelle toa uks avaneb 4-numbrilise koodiga. Ukse kohal olev silt ütleb, mis järjekorras numbrid tulevad.\n\nKui jääd hätta, helista laual olevat kella 🔔\n\n– Professor Nupp`; }
+function startText(){ const n = settings.rooms; return `${settings.night ? '🌙 ÖÖREŽIIM: maja on pime! Sinu taskulamp on paremas käes (arvutis pea küljes).\n\n' : ''}Tere, uurija! 🕵️\n\nLukustasin su oma majja. ${n > 1 ? `Sul tuleb läbida ${n} tuba – iga uks avaneb isemoodi.` : 'Pääse sellest toast välja!'}\n\nSelle toa uks avaneb 4-numbrilise koodiga. Ukse kohal olev silt ütleb, mis järjekorras numbrid tulevad.\n\nKui jääd hätta, helista laual olevat kella 🔔\n\n– Professor Nupp`; }
 const LAB_TEXT = 'Tubli, pääsesid laborisse! 🧪\n\nJärgmise ukse avab laserkiir – aga laserist on kristall puudu. Kristall on vitriinis, mis avaneb ainult õige võlujoogiga.\n\nRetsept on seinal, kuid kogused kirjutasin pisikeselt. Luubi panin kaalulaua sahtlisse – see avaneb, kui kaal on tasakaalus.\n\n– Professor Nupp';
 const OBS_TEXT = 'Viimane tuba – minu tähetorn! 🔭\n\nVäljapääsu kuldvõti on seifis. Seifi kood koosneb kolmest numbrist: üks peitub tähtede seas, teine muusikas ja kolmas varjus.\n\nPalju õnne!\n– Professor Nupp';
 const ROOM_TEXTS = [null, ['🧪 Labor', LAB_TEXT], ['🔭 Tähetorn', OBS_TEXT],
@@ -2288,7 +2546,7 @@ function showHint(){
 }
 
 /* ---------- mängu olekud ---------- */
-function hideMenus(){ menuUI.visible = false; pauseUI.visible = false; endUI.visible = false; closeReader(); }
+function hideMenus(){ readerFromMenu = false; galUI.visible = false; shopUI.visible = false; menuUI.visible = false; pauseUI.visible = false; endUI.visible = false; closeReader(); }
 function newGame(){
   tweens.length = 0; hideMenus();
   setupPuzzle(); applyPuzzle();
@@ -2393,14 +2651,14 @@ wristPause.visible = false; scene.add(wristPause);
 for (let i = 0; i < 2; i++) {
   const ctrl = renderer.xr.getController(i), grip = renderer.xr.getControllerGrip(i), hand = renderer.xr.getHand(i);
   rig.add(ctrl); rig.add(grip); rig.add(hand);
-  hand.add(handFactory.createHandModel(hand, 'spheres'));
+  const handModel = handFactory.createHandModel(hand, 'spheres'); hand.add(handModel);
   const holder = new THREE.Group(); holder.position.set(0, -0.01, -0.07); ctrl.add(holder);
   const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
   line.visible = false; ctrl.add(line);
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffe066 })); dot.visible = false; scene.add(dot);
   const body = makeCtrlHand(); grip.add(body);
   const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1, 6).translate(0, -0.5, 0), new THREE.MeshBasicMaterial({ color: 0xffffff })); stream.visible = false; scene.add(stream);
-  const h = { kind: 'xr', ctrl, grip, hand, holder, line, dot, body, stream, pourT: 0, held: null, bySqueeze: false, handedness: null, connected: false, isHand: false, drag: null, vel: new THREE.Vector3(), lastP: null, poking: null };
+  const h = { kind: 'xr', handModel, ctrl, grip, hand, holder, line, dot, body, stream, pourT: 0, held: null, bySqueeze: false, handedness: null, connected: false, isHand: false, drag: null, vel: new THREE.Vector3(), lastP: null, poking: null };
   ctrl.addEventListener('connected', e => { h.connected = true; h.handedness = e.data.handedness; h.isHand = !!e.data.hand; body.visible = !h.isHand; body.scale.x = h.handedness === 'left' ? -1 : 1; });
   ctrl.addEventListener('disconnected', () => { if (h.held) dropFall(h); h.connected = false; h.drag = null; });
   ctrl.addEventListener('selectstart', () => onSelectStart(h));
@@ -2453,6 +2711,7 @@ function teleportTo(h, p){
   rig.position.x += p.x - head.x; rig.position.z += p.z - head.z; sweep(300, 700, 0.15, 'sine', 0.08); return true;
 }
 function onSelectStart(h){
+  if (h.held === photoObj && mode === 'play') { takePhoto(); return; }
   if (mode === 'play' && !h.held) {
     if (h.isHand) { const it = nearItem(h, 0.11); if (it) { grab(h, it, true); pulse(h); return; } }
     const nd = nearDrag(h, h.isHand ? 0.12 : 0.1); if (nd) { startDrag(h, nd); return; }
@@ -2547,6 +2806,7 @@ function trackHands(dt){
 
 const flying = [];
 const allHands = [mouseHand, ...xrHands];
+applyLooks();
 const mouseNDC = new THREE.Vector2(0, 0);
 
 function iaRoot(o){ while (o) { if (o.userData.ia) return o; o = o.parent; } return null; }
@@ -2582,6 +2842,7 @@ function cast(h){
 }
 function doAction(h, r){
   audio();
+  if (h.held === photoObj && mode === 'play') { takePhoto(); return; }
   const root = r && r.root;
   if (root) {
     const ia = root.userData.ia;
@@ -2898,9 +3159,9 @@ renderer.setAnimationLoop(() => {
   if (noticeT > 0) { noticeT -= dt; if (noticeT <= 0) notice.mesh.visible = false; }
   hudT -= dt;
   if (hudT <= 0) { hudT = 0.25; const tl = timerLeft(); hud.mesh.visible = mode === 'play' && tl != null; if (hud.mesh.visible) drawHud(`⏳ ${fmtTime(tl)}`, tl < 60); }
+  updateNight(); updatePhotoCam(); updateTrails(dt); skinRealHands();
   renderer.render(scene, camera);
 });
 </script>
 </body>
 </html>
-[index (12).html](https://github.com/user-attachments/files/33783238/index.12.html)
