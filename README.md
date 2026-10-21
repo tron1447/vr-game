@@ -1,4 +1,4 @@
-[index (7).html](https://github.com/user-attachments/files/33780712/index.7.html)
+[index (8).html](https://github.com/user-attachments/files/33780777/index.8.html)
 <!doctype html>
 <html lang="et">
 <head>
@@ -1510,7 +1510,7 @@ function drawMenu(){
     c.textAlign = 'center'; c.fillStyle = '#b0bec5'; c.font = `${H * 0.028}px ${FONT}`;
     const b = best[bestKey()];
     c.fillText(b ? `🏆 Parim aeg (${DIFF[settings.diff].label}, ${settings.rooms} tuba): ${fmtTime(b.t)} • ${'★'.repeat(b.s)}` : `🏆 Parimat aega (${DIFF[settings.diff].label}, ${settings.rooms} tuba) veel pole`, W / 2, H * mY(-0.17));
-    c.fillStyle = '#90a4ae'; c.font = `${H * 0.024}px ${FONT}`;
+    c.fillStyle = "#90a4ae"; c.font = `${H * 0.019}px ${FONT}`;
     c.fillText('PULDID: päästik = kasuta/võta • külgnupp = haara • vasak kang = liigu • parem kang = pööra • Y/B = paus', W / 2, H * mY(-0.5));
     c.fillText('KÄED: näpista = võta/kasuta • näpista põrandale = teleport • vajuta nuppe sõrmega • viska käega • vasaku randme ⏸ nupp = paus', W / 2, H * mY(-0.55));
     c.fillText('Õpetaja küsimused saab sisestada arvutis (nupp "📚 Õpetaja küsimused" lehe ülaosas).', W / 2, H * mY(-0.6));
