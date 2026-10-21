@@ -1,7 +1,26 @@
-[index (11).html](https://github.com/user-attachments/files/33783155/index.11.html)
 <!doctype html>
 <html lang="et">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+// Automaatne uuendus: kui serveris on uuem versioon, laadi see kohe
+window.GAME_VERSION = 'v7';
+(function(){
+  try {
+    var u = location.pathname + '?nocache=' + Date.now();
+    fetch(u, { cache: 'no-store' }).then(function(r){ return r.text(); }).then(function(t){
+      var m = t.match(/window\.GAME_VERSION = '([^']+)'/);
+      if (m && m[1] !== window.GAME_VERSION) {
+        var k = 'pt_reload_' + m[1];
+        if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, '1'); location.replace(location.pathname + '?v=' + m[1] + '_' + Date.now()); }
+      }
+    }).catch(function(){});
+  } catch (e) {}
+})();
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Põgenemistuba VR</title>
@@ -19,7 +38,7 @@
 </head>
 <body>
 <div id="info">
-  <b>🔐 Põgenemistuba VR – Professor Nupu maja</b><br>
+  <b>🔐 Põgenemistuba VR – Professor Nupu maja</b> <span style="opacity:.6">(v7)</span><br>
   Questis: vajuta all <b>ENTER VR</b>.<br>
   Arvutis: <b>klõps</b> = kasuta / võta ese, <b>parem klõps</b> = pane ese maha,
   <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>Esc</b> = paus.<br>
@@ -1792,7 +1811,7 @@ const ROW = { diff: 0.42, timer: 0.3, rooms: 0.18, learn: 0.06, music: -0.06 };
 function drawMenu(){
   menuPanel.draw((c, W, H) => {
     panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.065}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.62));
+    c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.065}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.62)); c.fillStyle = '#78909c'; c.font = `${H * 0.025}px ${FONT}`; c.textAlign = 'right'; c.fillText(window.GAME_VERSION || '', W * 0.97, H * 0.05); c.textAlign = 'center';
     c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Iga mäng on erinev • 🪙 salamündid • 🏅 saavutused • pultidega või paljaste kätega', W / 2, H * mY(0.545));
     c.fillStyle = '#fff'; c.textAlign = 'left'; c.font = `bold ${H * 0.033}px ${FONT}`;
     c.fillText('Raskusaste', W * 0.03, H * mY(ROW.diff)); c.fillText('Taimer', W * 0.03, H * mY(ROW.timer)); c.fillText('Tubade arv', W * 0.03, H * mY(ROW.rooms)); c.fillText('Õppimine', W * 0.03, H * mY(ROW.learn)); c.fillText('Muusika', W * 0.03, H * mY(ROW.music));
@@ -2884,3 +2903,4 @@ renderer.setAnimationLoop(() => {
 </script>
 </body>
 </html>
+[index (12).html](https://github.com/user-attachments/files/33783238/index.12.html)
