@@ -1,4 +1,4 @@
-[Uploading index (5).html…]()
+[Uploading index (6).html…]()
 <!doctype html>
 <html lang="et">
 <head>
@@ -22,12 +22,29 @@
   <b>🔐 Põgenemistuba VR – Professor Nupu maja</b><br>
   Questis: vajuta all <b>ENTER VR</b>.<br>
   Arvutis: <b>klõps</b> = kasuta / võta ese, <b>parem klõps</b> = pane ese maha,
-  <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>Esc</b> = paus.
+  <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>F</b> = viska, <b>Esc</b> = paus.<br>
+  <button id="tqBtn" style="margin-top:6px">📚 Õpetaja küsimused</button>
+  <div id="tqBox" style="display:none;margin-top:6px">
+    Üks küsimus rea kohta: <code>küsimus | õige vastus | vale | vale | vale</code><br>
+    <textarea id="tqText" rows="7" cols="52" placeholder="Mis on Eesti pealinn? | Tallinn | Tartu | Pärnu | Narva"></textarea><br>
+    <button id="tqSave">💾 Salvesta</button> <span id="tqMsg"></span><br>
+    <small>Menüüs vali Õppimine → ✏️ Oma.</small>
+  </div>
 </div>
+<script>
+(() => { const b = document.getElementById('tqBtn'), box = document.getElementById('tqBox'), t = document.getElementById('tqText');
+  try { t.value = localStorage.getItem('pt_questions') || ''; } catch (e) {}
+  b.onclick = () => box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  document.getElementById('tqSave').onclick = () => { try { localStorage.setItem('pt_questions', t.value); } catch (e) {}
+    const n = t.value.split('\n').filter(l => l.split('|').length >= 3).length; document.getElementById('tqMsg').textContent = `Salvestatud: ${n} küsimust ✔`; };
+  ['keydown', 'keyup'].forEach(ev => t.addEventListener(ev, e => e.stopPropagation()));
+})();
+</script>
 <script type="module">
 import * as THREE from 'three';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 
 /* =========================================================
    PÕHI
@@ -53,7 +70,6 @@ const moon = new THREE.DirectionalLight(0x9fb4ff, 0.7); moon.position.set(6, 3.5
 const deskLight = new THREE.PointLight(0xffc27a, 0.6, 0, 2); deskLight.position.set(2.62, 1.06, -0.32); scene.add(deskLight);
 const ceilLight = new THREE.PointLight(0xfff1dc, 0, 0, 2); ceilLight.position.set(0, 2.1, 0); scene.add(ceilLight);
 const labLight = new THREE.PointLight(0xf2f8ff, 8, 0, 2); labLight.position.set(0, 2.2, -6); scene.add(labLight);
-const obsLight = new THREE.PointLight(0xffc98a, 5, 0, 2); obsLight.position.set(0, 2.25, -12); scene.add(obsLight);
 const outLight = new THREE.PointLight(0xfffbe8, 0, 0, 2); outLight.position.set(0, 1.6, -15.6); scene.add(outLight);
 
 const UP = new THREE.Vector3(0, 1, 0), DOWN = new THREE.Vector3(0, -1, 0), NEG_Z = new THREE.Vector3(0, 0, -1);
@@ -241,7 +257,7 @@ function doorTexture(base, panel, label, labelCol){
 const exitDoorTex = canvasTex(256, 540, (c, W, H) => {
   for (let x = 0; x < W; x += 64) { const b = 90 + tr() * 30; c.fillStyle = `rgb(${b | 0},${b * 0.62 | 0},${b * 0.36 | 0})`; c.fillRect(x, 0, 64, H); grain(c, x, 0, 64, H, 14, 0.15, true); c.fillStyle = 'rgba(0,0,0,0.5)'; c.fillRect(x, 0, 3, H); }
   for (const y of [70, 470]) { c.fillStyle = '#2b2b2b'; c.fillRect(0, y, W, 26); c.fillStyle = '#777'; for (let x = 16; x < W; x += 48) { c.beginPath(); c.arc(x, y + 13, 5, 0, 7); c.fill(); } }
-  c.fillStyle = '#ffd54f'; c.font = `bold 30px ${FONT}`; c.textAlign = 'center'; c.fillText('VÄLJAPÄÄS', W / 2, 300);
+  c.fillStyle = '#ffd54f'; c.font = `bold 30px ${FONT}`; c.textAlign = 'center'; c.fillText('🗝️ KULDUKS', W / 2, 300);
 }, false);
 const globeTex = canvasTex(1024, 512, (c, W, H) => {
   c.fillStyle = '#2f6fa8'; c.fillRect(0, 0, W, H);
@@ -338,7 +354,8 @@ function coloredMerge(parts){
 /* =========================================================
    REGISTER: toad, staatilised ja klõpsatavad objektid
    ========================================================= */
-const ROOMS = [{ z0: -3, z1: 3 }, { z0: -9, z1: -3 }, { z0: -15, z1: -9 }];
+const NR = 7;
+const ROOMS = Array.from({ length: NR }, (_, i) => ({ z0: 3 - 6 * (i + 1), z1: 3 - 6 * i }));
 const roomG = ROOMS.map(() => { const g = new THREE.Group(); scene.add(g); return g; });
 let CUR = roomG[0];
 const statics = [];
@@ -357,8 +374,8 @@ function makeIA(root, ia){
   return root;
 }
 function shown(o){ let last = null; while (o) { if (!o.visible) return false; last = o; o = o.parent; } return last === scene; }
-const roomAt = z => z > -3 ? roomG[0] : z > -9 ? roomG[1] : roomG[2];
-const roomIdx = z => z > -3 ? 0 : z > -9 ? 1 : 2;
+const roomIdx = z => clamp(Math.floor((3 - z) / 6), 0, NR - 1);
+const roomAt = z => roomG[roomIdx(z)];
 
 /* ---------- animatsioonid ---------- */
 const tweens = [];
@@ -398,6 +415,23 @@ shell(0, { floor: M.floor, floorTile: 1.5, ceil: M.ceil, ceilTile: 6, wall: M.wa
 shell(1, { floor: M.checker, floorTile: 1.2, ceil: M.labCeil, ceilTile: 6, wall: M.tile, wallTile: 0.6, band: M.labBand, bandH: 1.0, bandTx: 0.6, bandTy: 0.6, trim: M.greyTrim, southDoor: 0, northDoor: 0 });
 shell(2, { floor: M.floorDark, floorTile: 1.5, ceil: M.stars, ceilTile: 6, wall: M.plank, wallTile: 1, band: M.woodDark, bandH: 0.8, bandTx: 0.6, bandTy: 0.6, trim: M.trim, southDoor: 0, northDoor: 0 });
 
+const stoneTex = canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#141416'; c.fillRect(0, 0, W, H); for (let r = 0; r < 6; r++) { const off = (r % 2) * 32; for (let x = -off; x < W; x += 64) { const v = 40 + tr() * 24; c.fillStyle = `rgb(${v | 0},${v | 0},${v + 4 | 0})`; c.fillRect(x + 2, r * 42.67 + 2, 60, 38.6); } } speckle(c, W, H, 2500, 0.15); });
+const glassTex = canvasTex(256, 256, (c, W, H) => { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#d5f0e4'); g.addColorStop(1, '#a9d8c1'); c.fillStyle = g; c.fillRect(0, 0, W, H); c.strokeStyle = '#f2fbf6'; c.lineWidth = 12; c.strokeRect(0, 0, W, H); c.beginPath(); c.moveTo(W / 2, 0); c.lineTo(W / 2, H); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.moveTo(20, H * 0.8); c.lineTo(60, H * 0.2); c.lineTo(80, H * 0.2); c.lineTo(40, H * 0.8); c.fill(); });
+const terraTex = canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#6d4c3d'; c.fillRect(0, 0, W, H); const s = W / 4; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { c.fillStyle = `rgb(${175 + tr() * 30 | 0},${92 + tr() * 20 | 0},${62 + tr() * 15 | 0})`; c.fillRect(i * s + 3, j * s + 3, s - 6, s - 6); } speckle(c, W, H, 1500, 0.1); });
+const retroTex = canvasTex(256, 256, (c, W, H) => { for (let x = 0; x < W; x += 32) { c.fillStyle = (x / 32) % 2 ? '#c8763a' : '#a85a2a'; c.fillRect(x, 0, 32, H); } c.fillStyle = 'rgba(255,230,180,0.35)'; for (let y = 16; y < H; y += 64) for (let x = 16; x < W; x += 64) { c.beginPath(); c.arc(x, y, 10, 0, 7); c.fill(); } speckle(c, W, H, 800, 0.08); });
+const carpetTex = canvasTex(128, 128, (c, W, H) => { c.fillStyle = '#5b2c3c'; c.fillRect(0, 0, W, H); speckle(c, W, H, 3000, 0.2); });
+const playTex = canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#4a7fd0'; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(255,255,255,0.28)'; c.font = `${W * 0.2}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; ['★', '●', '▲', '■'].forEach((e, i) => c.fillText(e, (i % 2 + 0.5) * W / 2, (Math.floor(i / 2) + 0.5) * H / 2)); });
+Object.assign(M, {
+  stone: new THREE.MeshLambertMaterial({ map: stoneTex }), stoneFloor: new THREE.MeshLambertMaterial({ map: stoneTex, color: 0x9a9a9a }), darkCeil: new THREE.MeshBasicMaterial({ color: 0x0a0a0c }),
+  glassWall: new THREE.MeshLambertMaterial({ map: glassTex }), terra: new THREE.MeshLambertMaterial({ map: terraTex }), greenCeil: new THREE.MeshBasicMaterial({ color: 0xd8efe6 }),
+  retro: new THREE.MeshLambertMaterial({ map: retroTex }), carpet: new THREE.MeshLambertMaterial({ map: carpetTex }), retroCeil: new THREE.MeshBasicMaterial({ color: 0x7a5e44 }),
+  play: new THREE.MeshLambertMaterial({ map: playTex }), gym: new THREE.MeshLambertMaterial({ map: floorTex, color: 0xffe0b0 }), playCeil: new THREE.MeshBasicMaterial({ color: 0xe6edf6 })
+});
+shell(3, { floor: M.stoneFloor, floorTile: 2, ceil: M.darkCeil, ceilTile: 6, wall: M.stone, wallTile: 1.5, band: M.stone, bandH: 0.4, bandTx: 1, bandTy: 1, trim: M.darkMetal, southDoor: 0, northDoor: 0 });
+shell(4, { floor: M.terra, floorTile: 1.2, ceil: M.greenCeil, ceilTile: 6, wall: M.glassWall, wallTile: 1.5, band: M.woodDark, bandH: 0.7, bandTx: 0.6, bandTy: 0.6, trim: M.labCab, southDoor: 0, northDoor: 0 });
+shell(5, { floor: M.carpet, floorTile: 1, ceil: M.retroCeil, ceilTile: 6, wall: M.retro, wallTile: 1, band: M.woodDark, bandH: 0.9, bandTx: 0.6, bandTy: 0.6, trim: M.trim, southDoor: 0, northDoor: 0 });
+shell(6, { floor: M.gym, floorTile: 1.5, ceil: M.playCeil, ceilTile: 6, wall: M.play, wallTile: 1.5, band: M.labCab, bandH: 1.0, bandTx: 1, bandTy: 1, trim: M.labCab, southDoor: 0, northDoor: 0 });
+
 /* ---------- uksed ---------- */
 const DOORS = [];
 function makeDoor(z, tex, onClick){
@@ -415,12 +449,17 @@ makeDoor(-15, exitDoorTex, h => {
   if (h && h.held && h.held.userData.ia.item === 'goldkey') { useGoldKey(h); return; }
   sfx.bad(); notify('Suur uks on lukus. Vaja on kuldvõtit 🗝️');
 });
+makeDoor(-21, doorTexture('#3a3d40', 'rgba(255,255,255,0.05)', '🌱 KASVUHOONE', '#9ccc65'), () => { if (!st.door[3]) { sfx.bad(); notify('Uks on surve all lukus – keera ventiilid õigeks ⚙️'); } });
+makeDoor(-27, doorTexture('#e8f5e9', 'rgba(0,60,0,0.08)', '📻 RAADIOTUBA', '#2e7d32'), h => { if (st.door[4]) return; if (h && h.held && h.held.userData.ia.item === 'greenkey') { consume(h); sfx.unlock(); requestDoor(4); return; } sfx.bad(); notify('Uks on lukus – vaja on rohelist võtit 🗝️'); });
+makeDoor(-33, doorTexture('#8d5a3a', 'rgba(0,0,0,0.15)', '🎈 MÄNGUTUBA', '#ffe0b2'), () => { if (!st.door[5]) { sfx.bad(); notify('Uks avaneb raadiokoodiga – lukk on ukse kõrval 📻'); } });
+makeDoor(-39, doorTexture('#4a7fd0', 'rgba(255,255,255,0.12)', '🚪 VÄLJAPÄÄS', '#ffeb3b'), () => { if (!st.door[6]) { sfx.bad(); notify('Viska 3 palli korvi – siis uks avaneb 🏀'); } });
 function openDoor(i, cb){
+  if (st.door[i]) return;
   st.door[i] = true; sfx.creak();
-  const p = DOORS[i].pivot;
-  tween(2.0, k => { p.rotation.y = 1.75 * ease(k); if (i === 2) outLight.intensity = 6 * k; }, cb);
+  const p = DOORS[i].pivot, last = i === settings.rooms - 1;
+  tween(2.0, k => { p.rotation.y = 1.75 * ease(k); if (last) outLight.intensity = 6 * k; }, () => { if (cb) cb(); if (last) delay(0.6, win); });
 }
-{ const o = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.3, 1.2), new THREE.MeshBasicMaterial({ color: 0xfff6dc, side: THREE.BackSide })); o.position.set(0, 1.15, -15.65); scene.add(o); }
+const outsideBox = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.3, 1.2), new THREE.MeshBasicMaterial({ color: 0xfff6dc, side: THREE.BackSide })); scene.add(outsideBox);
 
 /* =========================================================
    TUBA 1 – PROFESSORI TÖÖTUBA (z −3 … 3)
@@ -506,7 +545,7 @@ for (const z of [-0.074, 0.474]) S(new THREE.BoxGeometry(0.66, 0.11, 0.012), M.i
 S(new THREE.BoxGeometry(0.012, 0.11, 0.56), M.inner, 2.84, 0.64, 0.2, drawer);
 D(new THREE.BoxGeometry(0.006, 0.055, 0.26), M.brass, 2.147, 0.672, 0.2, drawer);
 { const h = new THREE.Group(); h.position.set(2.135, 0.6, 0.2); drawer.add(h); D(new THREE.BoxGeometry(0.02, 0.02, 0.14), M.brass, 0, 0, 0, h);
-  makeIA(h, { onClick: () => { sfx.bad(); notify('Sahtel on lukus – keera kolme värvirõngast 🎨'); }, enabled: () => !st.drawerOpen }); }
+  makeIA(h, { onClick: () => openSlide(h), lockedMsg: 'Sahtel on lukus – keera kolme värvirõngast 🎨', drag: { kind: 'slide', dir: () => V3(-1, 0, 0), get: () => -drawer.position.x, set: v => drawer.position.x = -v, min: 0, max: 0.42 }, dragOk: () => st.drawerOpen }); }
 const rings = [];
 for (let i = 0; i < 3; i++) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.026, 20).rotateZ(Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xffffff }));
@@ -524,7 +563,7 @@ for (let i = 0; i < 3; i++) {
 }
 const startNote = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.27).rotateX(-Math.PI / 2), M.paper);
 startNote.position.set(2.42, 0.783, 0.6); startNote.rotation.y = 0.25; CUR.add(startNote);
-makeIA(startNote, { onClick: () => openReader('✉️ Kiri laual', START_TEXT) });
+makeIA(startNote, { onClick: () => openReader('✉️ Kiri laual', startText()) });
 {
   const bell = new THREE.Group(); bell.position.set(2.36, 0.78, 0.88); CUR.add(bell);
   D(new THREE.CylinderGeometry(0.055, 0.06, 0.015, 20), M.woodDark, 0, 0.0075, 0, bell);
@@ -732,7 +771,8 @@ for (const z of [-0.205, 0.205]) S(new THREE.BoxGeometry(0.42, 0.38, 0.01), M.gl
 for (const [x, z] of [[-0.205, -0.205], [-0.205, 0.205], [0.205, -0.205], [0.205, 0.205]]) D(new THREE.BoxGeometry(0.015, 0.4, 0.015), M.darkMetal, x, 0.21, z, vit);
 const vitDoor = new THREE.Group(); vitDoor.position.set(-0.21, 0, -0.21); vit.add(vitDoor);
 S(new THREE.BoxGeometry(0.01, 0.38, 0.42), M.glass, 0, 0.21, 0.21, vitDoor);
-D(new THREE.BoxGeometry(0.02, 0.04, 0.02), M.brass, -0.01, 0.21, 0.38, vitDoor);
+const vitKnob = new THREE.Group(); vitKnob.position.set(-0.015, 0.21, 0.38); vitDoor.add(vitKnob); D(new THREE.BoxGeometry(0.025, 0.06, 0.025), M.brass, 0, 0, 0, vitKnob);
+makeIA(vitKnob, { onClick: () => openSlide(vitKnob), lockedMsg: 'Vitriin avaneb ainult õige võlujoogiga 🧪', drag: { kind: 'hinge', center: () => vitDoor.getWorldPosition(V3(0, 0, 0)), get: () => vitDoor.rotation.y, set: v => vitDoor.rotation.y = v, min: -1.7, max: 0, open: -1.7, closed: 0 }, dragOk: () => st.potionDone });
 { const t = litPlane(0.3, 0.06, 900, (c, W, H) => { c.fillStyle = '#263238'; c.fillRect(0, 0, W, H); c.fillStyle = '#ffcc80'; c.font = `bold ${H * 0.5}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🔒 avaneb võlujoogiga', W / 2, H * 0.55); }); t.position.set(-0.215, 0.45, 0); t.rotation.y = -Math.PI / 2; vit.add(t); }
 // kaalulaud (lääs)
 S(boxUV(0.67, 0.05, 1.5, 0.6), M.labTop, -2.635, 0.825, -6.3);
@@ -741,7 +781,8 @@ for (const z of [-6.56, -6.04]) S(new THREE.BoxGeometry(0.6, 0.15, 0.02), M.labC
 S(new THREE.BoxGeometry(0.6, 0.02, 0.54), M.labCab, -2.62, 0.645, -6.3);
 const labDrawer = new THREE.Group(); CUR.add(labDrawer);
 S(new THREE.BoxGeometry(0.03, 0.14, 0.5), M.labCab, -2.315, 0.73, -6.3, labDrawer);
-D(new THREE.BoxGeometry(0.02, 0.02, 0.14), M.darkMetal, -2.29, 0.73, -6.3, labDrawer);
+const labHandle = new THREE.Group(); labHandle.position.set(-2.29, 0.73, -6.3); labDrawer.add(labHandle); D(new THREE.BoxGeometry(0.03, 0.025, 0.16), M.darkMetal, 0, 0, 0, labHandle);
+makeIA(labHandle, { onClick: () => openSlide(labHandle), lockedMsg: 'Sahtel on lukus – kaal peab olema tasakaalus ⚖️', drag: { kind: 'slide', dir: () => V3(1, 0, 0), get: () => labDrawer.position.x, set: v => labDrawer.position.x = v, min: 0, max: 0.35 }, dragOk: () => st.scaleDone });
 S(new THREE.BoxGeometry(0.55, 0.012, 0.46), M.inner, -2.6, 0.665, -6.3, labDrawer);
 for (const z of [-6.53, -6.07]) S(new THREE.BoxGeometry(0.55, 0.1, 0.012), M.inner, -2.6, 0.71, z, labDrawer);
 S(new THREE.BoxGeometry(0.012, 0.1, 0.46), M.inner, -2.88, 0.71, -6.3, labDrawer);
@@ -892,7 +933,7 @@ for (const z of [-14.34, -14.16]) D(new THREE.BoxGeometry(1.2, 0.025, 0.025), M.
 const xyBars = XY_COLS.map((col, i) => {
   const L = 0.34 - i * 0.025, m = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, L), new THREE.MeshLambertMaterial({ color: col }));
   m.position.set(-2.68 + i * 0.16, 0.785, -14.25); CUR.add(m);
-  makeIA(m, { onClick: () => hitBar(i) });
+  makeIA(m, { poke: true, onClick: () => hitBar(i) });
   return m;
 });
 const xyBox = new THREE.Group(); xyBox.position.set(-2.2, 0.75, -13.92); CUR.add(xyBox);
@@ -902,7 +943,8 @@ S(new THREE.BoxGeometry(0.3, 0.09, 0.012), M.wood, 0, 0.045, -0.08, xyBox);
 S(new THREE.BoxGeometry(0.31, 0.012, 0.17), M.wood, 0, 0.096, 0, xyBox);
 const xyDrawer = new THREE.Group(); xyBox.add(xyDrawer);
 S(new THREE.BoxGeometry(0.29, 0.08, 0.012), M.wood, 0, 0.045, 0.08, xyDrawer);
-D(new THREE.SphereGeometry(0.01, 8, 6), M.brass, 0, 0.045, 0.09, xyDrawer);
+const xyKnob = new THREE.Group(); xyKnob.position.set(0, 0.045, 0.095); xyDrawer.add(xyKnob); D(new THREE.SphereGeometry(0.014, 8, 6), M.brass, 0, 0, 0, xyKnob);
+makeIA(xyKnob, { onClick: () => openSlide(xyKnob), lockedMsg: 'Karbike on lukus – mängi õige meloodia 🎶', drag: { kind: 'slide', dir: () => V3(0, 0, 1), get: () => xyDrawer.position.z, set: v => xyDrawer.position.z = v, min: 0, max: 0.11 }, dragOk: () => st.melodyDone });
 const xyCard = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.08).rotateX(-Math.PI / 2), M.paper); xyCard.position.set(0, 0.014, 0.0); xyDrawer.add(xyCard);
 makeIA(xyCard, { onClick: () => { st.pianoRead = true; openReader('🎹 Kaart', `🎹 = ${P.dPiano}\n\n(Seifi teine number)`); }, enabled: () => st.melodyDone });
 // seif
@@ -923,7 +965,7 @@ const safeWheels = [0, 1, 2].map(i => {
 const safeHandle = new THREE.Group(); safeHandle.position.set(0.3, 0.25, 0.05); safeDoor.add(safeHandle);
 D(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 20).rotateX(Math.PI / 2), M.brass, 0, 0, 0, safeHandle);
 for (const a of [0, Math.PI / 2]) D(new THREE.BoxGeometry(0.16, 0.018, 0.018), M.brass, 0, 0, 0.02, safeHandle).rotation.z = a;
-makeIA(safeHandle, { onClick: trySafe, enabled: () => !st.safeOpen });
+makeIA(safeHandle, { onClick: () => { if (!st.safeOpen) trySafe(); else openSlide(safeHandle); }, drag: { kind: 'hinge', center: () => safeDoor.getWorldPosition(V3(0, 0, 0)), get: () => safeDoor.rotation.y, set: v => safeDoor.rotation.y = v, min: -1.9, max: 0, open: -1.9, closed: 0 }, dragOk: () => st.safeOpen });
 // väljapääsu lukk ja silt
 const exitLock = new THREE.Group(); exitLock.position.set(0.86, 1.25, 0.03); DOORS[2].pivot.add(exitLock);
 D(new THREE.BoxGeometry(0.1, 0.14, 0.012), M.gold, 0, 0, 0, exitLock);
@@ -931,7 +973,6 @@ D(new THREE.CircleGeometry(0.012, 12), M.black, 0, 0.015, 0.007, exitLock);
 D(new THREE.PlaneGeometry(0.008, 0.026), M.black, 0, -0.005, 0.007, exitLock);
 const goldInLock = D(new THREE.TorusGeometry(0.022, 0.006, 8, 16), M.gold, 0, 0.015, 0.04, exitLock); goldInLock.visible = false;
 makeIA(exitLock, { accepts: 'goldkey', onUse: useGoldKey, onClick: () => { sfx.bad(); notify('Suur uks on lukus. Vaja on kuldvõtit 🗝️'); }, enabled: () => !st.door[2] });
-{ const s = litPlane(1.0, 0.24, 600, (c, W, H) => { c.fillStyle = '#2e7d32'; roundRect(c, 0, 0, W, H, 20); c.fill(); c.fillStyle = '#fff'; c.font = `bold ${H * 0.55}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🚪 VÄLJAPÄÄS', W / 2, H * 0.55); }); s.position.set(0, 2.5, -14.985); CUR.add(s); }
 { // küünlad ja kriiditahvel
   for (const [x, y, z] of [[-1.7, 0.75, -14.5], [2.05, 0.765, -9.65], [-2.1, 0.78, -12.4]]) { D(new THREE.CylinderGeometry(0.02, 0.022, 0.12, 10), new THREE.MeshLambertMaterial({ color: 0xf5efe0 }), x, y + 0.06, z); D(new THREE.ConeGeometry(0.01, 0.03, 8), M.flame, x, y + 0.135, z); }
   const b = litPlane(1.4, 0.9, 400, (c, W, H) => {
@@ -944,12 +985,234 @@ makeIA(exitLock, { accepts: 'goldkey', onUse: useGoldKey, onClick: () => { sfx.b
 }
 
 /* =========================================================
+   TUBA 4 – KELDER (z −21 … −15)
+   ========================================================= */
+CUR = roomG[3];
+for (const y of [2.4, 2.56]) D(new THREE.CylinderGeometry(0.06, 0.06, 6, 10).rotateX(Math.PI / 2), M.darkMetal, 2.85, y, -18);
+D(new THREE.CylinderGeometry(0.05, 0.05, 6, 10).rotateX(Math.PI / 2), M.metal, -2.88, 2.5, -18);
+for (const [x, z] of [[1.6, -15.7], [2.3, -15.9], [-2.3, -20.3], [-1.6, -20.5]]) {
+  S(new THREE.CylinderGeometry(0.3, 0.3, 0.9, 16), M.woodDark, x, 0.45, z);
+  for (const y of [0.2, 0.7]) D(new THREE.TorusGeometry(0.302, 0.015, 6, 24).rotateX(Math.PI / 2), M.darkMetal, x, y, z);
+}
+const VALVE_COLS = ['#e53935', '#43a047', '#1e88e5'];
+const gauges = [], valves = [0, 1, 2].map(i => {
+  const z = -17 - i;
+  rod(V3(2.97, 1.25, z), V3(2.62, 1.25, z), 0.035, 0.035, M.darkMetal);
+  rod(V3(2.97, 1.7, z), V3(2.9, 1.7, z), 0.02, 0.02, M.darkMetal);
+  const g = new THREE.Group(); g.position.set(2.6, 1.25, z); CUR.add(g);
+  D(new THREE.TorusGeometry(0.12, 0.018, 8, 24).rotateY(Math.PI / 2), new THREE.MeshLambertMaterial({ color: VALVE_COLS[i] }), 0, 0, 0, g);
+  for (const a of [0, Math.PI / 3, 2 * Math.PI / 3]) D(new THREE.BoxGeometry(0.012, 0.24, 0.012), M.darkMetal, 0, 0, 0, g).rotation.x = a;
+  makeIA(g, { onClick: () => turnValve(i) });
+  const gp = new CanvasPlane(0.22, 0.22, 800, false, true); gp.mesh.position.set(2.89, 1.7, z); gp.mesh.rotation.y = -Math.PI / 2; CUR.add(gp.mesh); gauges.push(gp);
+  return g;
+});
+const chalk = new CanvasPlane(1.3, 0.7, 500, false, true); chalk.mesh.position.set(-2.965, 1.55, -18); chalk.mesh.rotation.y = Math.PI / 2; CUR.add(chalk.mesh);
+function drawGauge(i){
+  gauges[i].draw((c, W, H) => {
+    c.fillStyle = '#f2ead8'; c.beginPath(); c.arc(W / 2, H / 2, W / 2 - 4, 0, 7); c.fill(); c.lineWidth = 10; c.strokeStyle = VALVE_COLS[i]; c.stroke();
+    c.fillStyle = '#222'; c.font = `bold ${H * 0.13}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let n = 0; n <= 5; n++) { const a = Math.PI * 0.75 + n * Math.PI * 1.5 / 5; c.fillText(String(n), W / 2 + Math.cos(a) * W * 0.33, H / 2 + Math.sin(a) * H * 0.33); }
+    const a = Math.PI * 0.75 + st.valves[i] * Math.PI * 1.5 / 5; c.strokeStyle = '#c62828'; c.lineWidth = 6; c.beginPath(); c.moveTo(W / 2, H / 2); c.lineTo(W / 2 + Math.cos(a) * W * 0.27, H / 2 + Math.sin(a) * H * 0.27); c.stroke();
+    c.fillStyle = '#333'; c.beginPath(); c.arc(W / 2, H / 2, 8, 0, 7); c.fill();
+  });
+}
+function drawChalk(){
+  chalk.draw((c, W, H) => {
+    c.fillStyle = 'rgba(255,255,255,0.85)'; c.font = `bold ${H * 0.13}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('Õige surve:', W / 2, H * 0.2);
+    P.valves.forEach((v, i) => { const x = W * (0.25 + i * 0.25); c.fillStyle = VALVE_COLS[i]; c.beginPath(); c.arc(x, H * 0.55, H * 0.1, 0, 7); c.fill(); c.fillStyle = 'rgba(255,255,255,0.9)'; c.font = `bold ${H * 0.22}px Georgia, serif`; c.fillText(String(v), x, H * 0.82); });
+  });
+}
+function turnValve(i){
+  if (st.door[3]) return;
+  st.valves[i] = (st.valves[i] + 1) % 6; noise(0.3, 0.15, 1500); drawGauge(i);
+  const g = valves[i], r0 = g.rotation.x; tween(0.3, k => g.rotation.x = r0 + ease(k) * Math.PI / 3);
+  if (st.valves.every((v, j) => v === P.valves[j])) { delay(0.4, () => { sfx.unlock(); notify('Surve on õige! ⚙️', 3); requestDoor(3); }); }
+}
+
+/* =========================================================
+   TUBA 5 – KASVUHOONE (z −27 … −21)
+   ========================================================= */
+CUR = roomG[4];
+S(boxUV(0.67, 0.05, 1.8, 0.6), M.wood, -2.635, 0.825, -23.5);
+for (const [x, z] of [[-2.35, -22.65], [-2.92, -22.65], [-2.35, -24.35], [-2.92, -24.35]]) S(new THREE.BoxGeometry(0.05, 0.8, 0.05), M.woodDark, x, 0.4, z);
+for (const z of [-23.76, -23.24]) S(new THREE.BoxGeometry(0.6, 0.15, 0.02), M.woodDark, -2.62, 0.725, z);
+S(new THREE.BoxGeometry(0.6, 0.02, 0.54), M.woodDark, -2.62, 0.645, -23.5);
+const potDrawer = new THREE.Group(); CUR.add(potDrawer);
+S(new THREE.BoxGeometry(0.03, 0.14, 0.5), M.wood, -2.315, 0.73, -23.5, potDrawer);
+S(new THREE.BoxGeometry(0.55, 0.012, 0.46), M.inner, -2.6, 0.665, -23.5, potDrawer);
+for (const z of [-23.73, -23.27]) S(new THREE.BoxGeometry(0.55, 0.1, 0.012), M.inner, -2.6, 0.71, z, potDrawer);
+S(new THREE.BoxGeometry(0.012, 0.1, 0.46), M.inner, -2.88, 0.71, -23.5, potDrawer);
+const potHandle = new THREE.Group(); potHandle.position.set(-2.29, 0.73, -23.5); potDrawer.add(potHandle);
+D(new THREE.BoxGeometry(0.03, 0.025, 0.16), M.brass, 0, 0, 0, potHandle);
+makeIA(potHandle, { onClick: () => openSlide(potHandle), drag: { kind: 'slide', dir: () => V3(1, 0, 0), get: () => potDrawer.position.x, set: v => potDrawer.position.x = v, min: 0, max: 0.35 }, dragOk: () => true });
+for (let i = 0; i < 5; i++) { const x = -2.85 + i * 0.13; D(new THREE.CylinderGeometry(0.045, 0.035, 0.08, 12), M.pot, x, 0.89, -22.8); D(new THREE.SphereGeometry(0.05, 8, 6), M.leaf, x, 0.96, -22.8); }
+const soilMat = new THREE.MeshLambertMaterial({ color: 0x3e2a1c });
+const pot = new THREE.Group(); pot.position.set(1.2, 0, -24.8); CUR.add(pot);
+S(new THREE.CylinderGeometry(0.32, 0.24, 0.5, 20), M.pot, 0, 0.25, 0, pot);
+D(new THREE.CircleGeometry(0.3, 20).rotateX(-Math.PI / 2), soilMat, 0, 0.47, 0, pot);
+const plant = new THREE.Group(); plant.position.y = 0.47; pot.add(plant);
+D(new THREE.CylinderGeometry(0.018, 0.03, 1.2, 8).translate(0, 0.6, 0), M.leaf, 0, 0, 0, plant);
+for (let i = 0; i < 8; i++) { const l = D(new THREE.SphereGeometry(0.09, 8, 6).scale(1.6, 0.25, 0.8), M.leaf, Math.cos(i * 2.4) * 0.08, 0.2 + i * 0.12, Math.sin(i * 2.4) * 0.08, plant); l.rotation.y = -i * 2.4; l.rotation.z = 0.3; }
+const flower = new THREE.Group(); flower.position.y = 1.25; plant.add(flower);
+const petals = [];
+for (let i = 0; i < 7; i++) { const a = i * Math.PI * 2 / 7; const pg = new THREE.Group(); pg.rotation.y = a; flower.add(pg); D(new THREE.SphereGeometry(0.07, 10, 8).scale(1.4, 0.3, 0.7), new THREE.MeshLambertMaterial({ color: 0xff6fa8 }), 0.09, 0, 0, pg); petals.push(pg); }
+D(new THREE.SphereGeometry(0.04, 10, 8), new THREE.MeshLambertMaterial({ color: 0xffd23a }), 0, 0, 0, flower);
+makeIA(pot, { accepts: it => it === 'seed' || it === 'can', noAutoUse: true, onUse: potUse, onClick: () => notify(st.seeded ? (st.grown ? 'Imeline lill! 🌸' : 'Taim tahab vett 💧') : 'Suur pott – siia võiks midagi istutada 🌱') });
+S(new THREE.BoxGeometry(0.8, 0.04, 0.8), M.wood, 2.4, 0.73, -22.4);
+for (const [x, z] of [[2.05, -22.05], [2.75, -22.05], [2.05, -22.75], [2.75, -22.75]]) S(new THREE.BoxGeometry(0.04, 0.71, 0.04), M.woodDark, x, 0.355, z);
+for (let i = 0; i < 4; i++) { const z = -23.6 - i * 0.9; S(new THREE.CylinderGeometry(0.25, 0.2, 0.45, 14), M.pot, 2.65, 0.225, z); for (let k = 0; k < 6; k++) D(new THREE.SphereGeometry(0.14, 8, 6), M.leaf, 2.65 + Math.cos(k) * 0.12, 0.6 + (k % 3) * 0.1, z + Math.sin(k) * 0.12); }
+function potUse(h){
+  const it = h.held.userData.ia.item;
+  if (it === 'seed') { consume(h); st.seeded = true; plant.visible = true; plant.scale.setScalar(0.08); sfx.ok(); notify('Seeme on mullas 🌱 Nüüd kasta!', 3); }
+  else if (it === 'can') { if (!st.seeded) { sfx.bad(); notify('Enne istuta seeme 🌱'); return; } waterPlant(); }
+}
+function waterPlant(){
+  if (st.grown) return;
+  st.water++; noise(0.6, 0.15, 900, 'lowpass');
+  const s0 = plant.scale.x, s1 = [0.08, 0.4, 0.7, 1.0][Math.min(3, st.water)];
+  tween(1.2, k => plant.scale.setScalar(s0 + (s1 - s0) * ease(k)));
+  if (st.water >= 3) { st.grown = true; delay(1.3, () => { sfx.reveal(); notify('Lill puhkes õide! 🌸 Seal sees on võti.', 3.5); items.greenkey.obj.visible = true; tween(1, k => petals.forEach(p => p.rotation.z = -0.9 * ease(k))); }); }
+  else notify(`Kastetud 💧 (${st.water}/3)`);
+}
+
+/* =========================================================
+   TUBA 6 – RAADIOTUBA (z −33 … −27)
+   ========================================================= */
+CUR = roomG[5];
+S(new THREE.BoxGeometry(0.8, 0.04, 1.2), M.wood, 2.55, 0.78, -30);
+for (const [x, z] of [[2.2, -29.45], [2.9, -29.45], [2.2, -30.55], [2.9, -30.55]]) S(new THREE.BoxGeometry(0.04, 0.76, 0.04), M.woodDark, x, 0.38, z);
+const radio = new THREE.Group(); radio.position.set(2.62, 0.8, -30); radio.rotation.y = -Math.PI / 2; CUR.add(radio);
+S(boxUV(0.56, 0.34, 0.24, 0.3), M.wood, 0, 0.17, 0, radio);
+const grill = litPlane(0.22, 0.24, 600, (c, W, H) => { c.fillStyle = '#2b1e14'; c.fillRect(0, 0, W, H); c.strokeStyle = '#a07a4a'; c.lineWidth = 6; for (let y = 10; y < H; y += 18) { c.beginPath(); c.moveTo(6, y); c.lineTo(W - 6, y); c.stroke(); } });
+grill.position.set(-0.14, 0.17, 0.121); radio.add(grill);
+const dial = new CanvasPlane(0.26, 0.1, 1000, false, true); dial.mesh.position.set(0.13, 0.24, 0.121); radio.add(dial.mesh);
+const radioLamp = D(new THREE.SphereGeometry(0.025, 12, 10), new THREE.MeshBasicMaterial({ color: 0x331100 }), 0.13, 0.36, 0, radio);
+const knobs = [-1, 1].map((dir, k) => {
+  const g = new THREE.Group(); g.position.set(0.07 + k * 0.12, 0.1, 0.125); radio.add(g);
+  D(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 16).rotateX(Math.PI / 2), M.darkMetal, 0, 0, 0, g);
+  const lbl = litPlane(0.05, 0.03, 1200, (c, W, H) => { c.fillStyle = '#ffe9b0'; c.font = `bold ${H * 0.8}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(dir < 0 ? '◀' : '▶', W / 2, H * 0.55); });
+  lbl.position.set(0, 0, 0.017); g.add(lbl);
+  makeIA(g, { onClick: () => tune(dir) });
+  return g;
+});
+function drawDial(){
+  dial.draw((c, W, H) => {
+    c.fillStyle = '#f3e3b5'; c.fillRect(0, 0, W, H); c.strokeStyle = '#5a3d1a'; c.lineWidth = 3; c.fillStyle = '#5a3d1a'; c.font = `${H * 0.22}px ${FONT}`; c.textAlign = 'center';
+    for (let f = 88; f <= 108; f += 2) { const x = W * (0.06 + (f - 88) / 20 * 0.88); c.beginPath(); c.moveTo(x, H * 0.55); c.lineTo(x, H * (f % 4 === 0 ? 0.3 : 0.42)); c.stroke(); if (f % 4 === 0) c.fillText(String(f), x, H * 0.85); }
+    const x = W * (0.06 + (st.freq - 88) / 20 * 0.88); c.strokeStyle = '#d32f2f'; c.lineWidth = 5; c.beginPath(); c.moveTo(x, 4); c.lineTo(x, H - 4); c.stroke();
+    c.fillStyle = '#d32f2f'; c.font = `bold ${H * 0.24}px ${FONT}`; c.textAlign = 'right'; c.fillText(`${st.freq} MHz`, W - 6, H * 0.22);
+  });
+}
+const MORSE = ['-----', '.----', '..---', '...--', '....-', '.....', '-....', '--...', '---..', '----.'];
+function tune(dir){
+  st.freq = clamp(st.freq + dir, 88, 108); drawDial(); noise(0.12, 0.08, 2500);
+  st.morseTok++;
+  if (st.freq === P.freq) { notify('📻 Piiks-piiks… raadio saadab morset!', 3); playMorse(st.morseTok); } else radioLamp.material.color.set(0x331100);
+}
+function playMorse(tok){
+  if (tok !== st.morseTok || mode !== 'play') return;
+  let t = 0.4;
+  for (const d of P.radioCode) {
+    for (const s of MORSE[d]) {
+      const len = s === '.' ? 0.15 : 0.45;
+      delay(t, () => { if (tok !== st.morseTok) return; tone(720, len, 0, 'sine', 0.15); radioLamp.material.color.set(0xffd54f); });
+      delay(t + len, () => { if (tok === st.morseTok) radioLamp.material.color.set(0x331100); });
+      t += len + 0.15;
+    }
+    t += 0.7;
+  }
+  delay(t + 1.8, () => playMorse(tok));
+}
+const mirrorText = new CanvasPlane(1.1, 0.4, 600, false, true); mirrorText.mesh.position.set(-1.2, 1.7, -27.03); mirrorText.mesh.rotation.y = Math.PI; CUR.add(mirrorText.mesh);
+function drawMirrorText(){
+  mirrorText.draw((c, W, H) => {
+    c.fillStyle = '#f5ead0'; c.fillRect(0, 0, W, H); c.strokeStyle = '#6b4a2e'; c.lineWidth = 10; c.strokeRect(0, 0, W, H);
+    c.save(); if (!st.mirrorRead) { c.translate(W, 0); c.scale(-1, 1); }
+    c.fillStyle = '#3b2a16'; c.font = `bold ${H * 0.2}px Georgia, serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('Professori jaam:', W / 2, H * 0.33); c.font = `bold ${H * 0.3}px Georgia, serif`; c.fillText(`${P.freq} MHz`, W / 2, H * 0.7);
+    c.restore();
+  });
+}
+{ const mt = litPlane(0.7, 0.9, 500, (c, W, H) => {
+    c.fillStyle = '#f5f0e0'; c.fillRect(0, 0, W, H); c.fillStyle = '#222'; c.font = `bold ${H * 0.065}px ${FONT}`; c.textAlign = 'center'; c.fillText('MORSE: NUMBRID', W / 2, H * 0.08);
+    MORSE.forEach((m, d) => { const y = H * (0.17 + d * 0.081); c.textAlign = 'left'; c.font = `bold ${H * 0.06}px ${FONT}`; c.fillText(String(d), W * 0.12, y); for (let k = 0; k < 5; k++) { const x = W * (0.32 + k * 0.12); if (m[k] === '.') { c.beginPath(); c.arc(x + W * 0.03, y - H * 0.015, H * 0.012, 0, 7); c.fill(); } else c.fillRect(x, y - H * 0.022, W * 0.09, H * 0.014); } });
+    c.font = `${H * 0.035}px ${FONT}`; c.textAlign = 'center'; c.fillText('• = lühike piiks   ▬ = pikk piiks', W / 2, H * 0.97);
+  });
+  mt.position.set(-2.965, 1.6, -30.6); mt.rotation.y = Math.PI / 2; CUR.add(mt); }
+S(new THREE.BoxGeometry(0.3, 0.03, 1.2), M.wood, -2.82, 1.2, -28.9);
+for (let i = 0; i < 6; i++) D(new THREE.CylinderGeometry(0.12, 0.12, 0.01, 20).rotateZ(Math.PI / 2), new THREE.MeshLambertMaterial({ color: [0x111111, 0x8e24aa, 0x111111, 0xe53935, 0x111111, 0x1e88e5][i] }), -2.85, 1.335, -29.3 + i * 0.03);
+const codeLock = new THREE.Group(); codeLock.position.set(1.05, 1.35, -32.97); CUR.add(codeLock);
+S(new THREE.BoxGeometry(0.46, 0.34, 0.04), M.darkMetal, 0, 0, 0, codeLock);
+{ const t = litPlane(0.4, 0.06, 900, (c, W, H) => { c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.6}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('📻 RAADIOKOOD', W / 2, H * 0.55); }); t.position.set(0, 0.13, 0.021); codeLock.add(t); }
+const codeWheels = [0, 1, 2].map(i => {
+  const cp = new CanvasPlane(0.09, 0.12, 900); cp.mesh.position.set((i - 1) * 0.11 - 0.05, -0.02, 0.022); codeLock.add(cp.mesh);
+  makeIA(cp.mesh, { scaleHover: true, onClick: () => { st.codeWheel[i] = (st.codeWheel[i] + 1) % 10; drawCodeWheel(i); tone(1400, .03, 0, 'square', .06); }, enabled: () => !st.door[5] });
+  return cp;
+});
+function drawCodeWheel(i){ codeWheels[i].draw((c, W, H) => { c.fillStyle = '#1a1a1a'; roundRect(c, 3, 3, W - 6, H - 6, 10); c.fill(); c.strokeStyle = '#c9a13b'; c.lineWidth = 5; c.stroke(); c.fillStyle = '#f5f5f5'; c.font = `bold ${H * 0.6}px monospace`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(st.codeWheel[i]), W / 2, H * 0.55); }); }
+const codeOk = new CanvasPlane(0.09, 0.09, 900); codeOk.mesh.position.set(0.17, -0.02, 0.022); codeLock.add(codeOk.mesh);
+codeOk.draw((c, W, H) => { c.fillStyle = '#2a7a35'; roundRect(c, 3, 3, W - 6, H - 6, 12); c.fill(); c.fillStyle = '#fff'; c.font = `bold ${H * 0.42}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('OK', W / 2, H * 0.55); });
+makeIA(codeOk.mesh, { scaleHover: true, onClick: () => { if (st.codeWheel.every((v, i) => v === P.radioCode[i])) { sfx.unlock(); notify('Kood õige! 📻', 3); requestDoor(5); } else { sfx.bad(); notify('Vale kood – kuula morset uuesti 🎧'); } }, enabled: () => !st.door[5] });
+{ const ch = new THREE.Group(); ch.position.set(-2.1, 0, -31.6); ch.rotation.y = Math.PI / 3; CUR.add(ch);
+  S(new THREE.BoxGeometry(0.7, 0.32, 0.65), M.fabric, 0, 0.16, 0, ch); S(new THREE.BoxGeometry(0.7, 0.65, 0.15), M.fabric, 0, 0.6, -0.27, ch); }
+
+/* =========================================================
+   TUBA 7 – MÄNGUTUBA (z −39 … −33)
+   ========================================================= */
+CUR = roomG[6];
+const levers = [0, 1, 2, 3].map(i => {
+  const z = -34.6 - i * 0.38;
+  S(new THREE.BoxGeometry(0.04, 0.24, 0.14), M.darkMetal, 2.96, 1.2, z);
+  const g = new THREE.Group(); g.position.set(2.93, 1.2, z); CUR.add(g);
+  D(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 8).translate(0, 0.11, 0), M.metal, 0, 0, 0, g);
+  D(new THREE.SphereGeometry(0.035, 12, 10), new THREE.MeshLambertMaterial({ color: 0xe53935 }), 0, 0.22, 0, g);
+  makeIA(g, { onClick: () => flipLever(i) });
+  const n = litPlane(0.06, 0.06, 1200, (c, W, H) => { c.fillStyle = '#fff'; c.beginPath(); c.arc(W / 2, H / 2, W / 2 - 2, 0, 7); c.fill(); c.fillStyle = '#111'; c.font = `bold ${H * 0.6}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(i + 1), W / 2, H * 0.55); });
+  n.position.set(2.975, 1.42, z); n.rotation.y = -Math.PI / 2; CUR.add(n);
+  return g;
+});
+const leverPic = new CanvasPlane(1.3, 0.55, 500, false, true); leverPic.mesh.position.set(-2.965, 1.6, -35.1); leverPic.mesh.rotation.y = Math.PI / 2; CUR.add(leverPic.mesh);
+function drawLeverPic(){
+  leverPic.draw((c, W, H) => {
+    c.fillStyle = '#c99a4a'; c.fillRect(0, 0, W, H); c.fillStyle = '#bfe3ff'; c.fillRect(16, 16, W - 32, (H - 32) / 2); c.fillStyle = '#2f7fc1'; c.fillRect(16, H / 2, W - 32, (H - 32) / 2);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    P.levers.forEach((up, i) => { const x = W * (0.16 + i * 0.227); c.font = `${H * 0.26}px ${FONT}`; c.fillText(up ? '🐦' : '🐟', x, up ? H * 0.3 : H * 0.72); c.fillStyle = '#fff'; c.font = `bold ${H * 0.1}px ${FONT}`; c.fillText(String(i + 1), x, H * 0.52); c.fillStyle = '#000'; });
+  });
+}
+function flipLever(i){
+  if (st.toyOpen) return;
+  st.levers[i] = !st.levers[i]; tone(300, .08, 0, 'square', .1);
+  const g = levers[i], r0 = g.rotation.z, r1 = st.levers[i] ? 0.6 : -0.6 + Math.PI;
+  tween(0.25, k => g.rotation.z = r0 + (r1 - r0) * ease(k));
+  if (st.levers.every((v, j) => v === P.levers[j])) delay(0.4, () => { st.toyOpen = true; sfx.unlock(); notify('Mänguasjakast avanes! 🎁', 3); tween(1, k => toyLid.rotation.x = 1.9 * ease(k)); });
+}
+const toyBox = new THREE.Group(); toyBox.position.set(2.2, 0, -38.3); CUR.add(toyBox);
+S(new THREE.BoxGeometry(0.8, 0.03, 0.5), M.labCab, 0, 0.015, 0, toyBox);
+for (const z of [-0.235, 0.235]) S(new THREE.BoxGeometry(0.8, 0.4, 0.03), new THREE.MeshLambertMaterial({ color: 0xffb300 }), 0, 0.2, z, toyBox);
+for (const x of [-0.385, 0.385]) S(new THREE.BoxGeometry(0.03, 0.4, 0.44), new THREE.MeshLambertMaterial({ color: 0xffb300 }), x, 0.2, 0, toyBox);
+const toyLid = new THREE.Group(); toyLid.position.set(0, 0.4, -0.25); toyBox.add(toyLid);
+S(new THREE.BoxGeometry(0.84, 0.05, 0.52), new THREE.MeshLambertMaterial({ color: 0xe53935 }), 0, 0.025, 0.26, toyLid);
+const BASKET = { x: -1.5, z: -38.2, r: 0.24, top: 0.55 }, LINE_Z = -35.8;
+D(new THREE.CylinderGeometry(BASKET.r, 0.2, BASKET.top, 20, 1, true), new THREE.MeshLambertMaterial({ color: 0x8d6e63, side: THREE.DoubleSide }), BASKET.x, BASKET.top / 2, BASKET.z);
+D(new THREE.TorusGeometry(BASKET.r, 0.015, 8, 24).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xff7043 }), BASKET.x, BASKET.top, BASKET.z);
+D(new THREE.PlaneGeometry(4, 0.08).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffeb3b }), -0.6, 0.006, LINE_Z);
+{ const t = litPlane(0.6, 0.12, 600, (c, W, H) => { c.fillStyle = '#ffeb3b'; c.font = `bold ${H * 0.7}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('VISKEJOON', W / 2, H * 0.55); }); t.geometry.rotateX(-Math.PI / 2); t.position.set(-0.6, 0.007, LINE_Z + 0.12); CUR.add(t); }
+const basketLamps = [0, 1, 2].map(i => D(new THREE.SphereGeometry(0.05, 12, 10), new THREE.MeshBasicMaterial({ color: 0x333333 }), BASKET.x - 0.15 + i * 0.15, 1.6, -38.96));
+for (const [c, x, z] of [[0xef5350, -2.4, -33.6], [0x42a5f5, 1.6, -33.5], [0x66bb6a, -2.5, -37.0]]) { D(new THREE.SphereGeometry(0.13, 14, 10), new THREE.MeshLambertMaterial({ color: c }), x, 2.3, z); D(new THREE.CylinderGeometry(0.003, 0.003, 0.7, 4), M.black, x, 2.65, z); }
+
+/* ---------- väljapääsu silt, mis liigub viimasesse tuppa ---------- */
+const exitSign = litPlane(1.0, 0.24, 600, (c, W, H) => { c.fillStyle = '#2e7d32'; roundRect(c, 0, 0, W, H, 20); c.fill(); c.fillStyle = '#fff'; c.font = `bold ${H * 0.55}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🚪 VÄLJAPÄÄS', W / 2, H * 0.55); });
+scene.add(exitSign);
+
+/* =========================================================
    KULDSED HAMMASRATTAD (boonus)
    ========================================================= */
 const GEAR_SPOTS = [
   [-2.45, 0, -1.6], [2.9, 1.30, -0.25], [-2.8, 2.005, 0.25], [2.8, 0, -2.85],
   [1.3, 1.715, -3.06], [-1.5, 1.315, -3.06], [2.62, 1.32, -6.2], [-2.85, 0.85, -7.0],
-  [2.4, 0.765, -9.62], [-2.0, 0, -14.8], [2.4, 0.75, -14.45], [-2.85, 0, -9.4]
+  [2.4, 0.765, -9.62], [-2.0, 0, -14.8], [2.4, 0.75, -14.45], [-2.85, 0, -9.4],
+  [-2.3, 0.9, -20.3], [2.75, 0, -20.8], [2.5, 0.75, -22.2], [-2.8, 0.85, -24.2], [-2.6, 0, -27.5], [2.4, 0.8, -29.5], [-2.7, 0, -33.4], [2.6, 0, -33.6]
 ];
 const gearGeo = (() => { const parts = [new THREE.CylinderGeometry(0.032, 0.032, 0.012, 20).rotateX(Math.PI / 2)]; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; parts.push(new THREE.BoxGeometry(0.014, 0.014, 0.012).translate(Math.cos(a) * 0.036, Math.sin(a) * 0.036, 0)); } return mergeGeometries(parts.map(p => p.index ? p.toNonIndexed() : p)); })();
 const gears = [0, 1, 2].map(() => { const g = new THREE.Group(); const m = D(gearGeo, M.gold, 0, 0.045, 0, g); g.userData.m = m; makeIA(g, { onClick: () => collectGear(g) }); return g; });
@@ -1004,7 +1267,7 @@ const potionObjs = ['r', 'b', 'y'].map(ck => {
   D(new THREE.CylinderGeometry(0.012, 0.012, 0.02, 10), new THREE.MeshLambertMaterial({ color: 0x8d6e63 }), 0, 0.195, 0, g);
   const l = litPlane(0.05, 0.035, 1600, (c, W, H) => { c.fillStyle = '#f2e6c8'; c.fillRect(0, 0, W, H); c.fillStyle = POT[ck][1]; c.beginPath(); c.arc(W / 2, H / 2, H * 0.32, 0, 7); c.fill(); });
   l.position.set(0, 0.07, 0.037); g.add(l);
-  return finishItem(g, { item: 'potion' + ck, ck, color: POT[ck][1] });
+  return finishItem(g, { item: 'potion' + ck, ck, color: POT[ck][1], pour: { neck: V3(0, 0.2, 0), tilt: -0.2, r: 0.15, color: POT[ck][1], target: () => flask.getWorldPosition(V3(0, 0, 0)).add(V3(0, 0.37, 0)), dose: () => addDose(ck) } });
 });
 const crystalObj = new THREE.Group();
 D(new THREE.OctahedronGeometry(0.045), new THREE.MeshLambertMaterial({ color: 0xff3d6e, emissive: 0x99102e, flatShading: true }), 0, 0, 0, crystalObj).scale.set(0.8, 1.3, 0.8);
@@ -1044,6 +1307,127 @@ function layoutPan(pan){
   const its = pan.children.filter(c => c.userData.ia && c.userData.ia.item === 'w');
   const slots = [[-0.04, -0.04], [0.04, 0.04], [0.04, -0.04], [-0.04, 0.04], [0, 0]];
   its.forEach((it, i) => { const s = slots[i % 5], layer = Math.floor(i / 5); it.position.set(s[0], 0.006 + it.userData.ia.restOffset + layer * 0.09, s[1]); });
+}
+
+// tubade 4–7 esemed
+const torchObj = new THREE.Group();
+D(new THREE.CylinderGeometry(0.02, 0.02, 0.18, 14).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xf9a825 }), 0, 0, 0.02, torchObj);
+D(new THREE.CylinderGeometry(0.033, 0.022, 0.05, 16).rotateX(Math.PI / 2), M.darkMetal, 0, 0, -0.09, torchObj);
+D(new THREE.CircleGeometry(0.03, 16).rotateY(Math.PI), new THREE.MeshBasicMaterial({ color: 0xfff6c0 }), 0, 0, -0.116, torchObj);
+finishItem(torchObj, { item: 'torch', onGrab: () => { if (!st.torchTaken) { st.torchTaken = true; notify('Taskulamp! 🔦 Valgusta pimedust.', 3); } } });
+const torchSpot = new THREE.SpotLight(0xfff2d0, 0, 14, 0.42, 0.45, 1.2); scene.add(torchSpot); scene.add(torchSpot.target);
+const seedObj = new THREE.Group();
+{ const l = litPlane(0.09, 0.12, 1200, (c, W, H) => { c.fillStyle = '#7cb342'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = `${H * 0.4}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🌻', W / 2, H * 0.42); c.font = `bold ${H * 0.14}px ${FONT}`; c.fillText('SEEMNED', W / 2, H * 0.82); }); l.geometry.rotateX(-Math.PI / 2); l.position.y = 0.006; seedObj.add(l);
+  D(new THREE.BoxGeometry(0.09, 0.01, 0.12), new THREE.MeshLambertMaterial({ color: 0x558b2f }), 0, 0, 0, seedObj); }
+finishItem(seedObj, { item: 'seed' });
+const canObj = new THREE.Group();
+D(new THREE.CylinderGeometry(0.08, 0.09, 0.16, 18), new THREE.MeshLambertMaterial({ color: 0x43a047 }), 0, 0.08, 0, canObj);
+rod(V3(0.07, 0.07, 0), V3(0.2, 0.18, 0), 0.012, 0.02, new THREE.MeshLambertMaterial({ color: 0x43a047 }), canObj);
+D(new THREE.TorusGeometry(0.06, 0.01, 8, 16, Math.PI).rotateZ(Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x2e7d32 }), -0.06, 0.16, 0, canObj);
+finishItem(canObj, { item: 'can', pour: { neck: V3(0.2, 0.18, 0), tilt: 0.55, r: 0.32, color: '#7fc8ff', target: () => st.seeded && !st.grown ? pot.getWorldPosition(V3(0, 0, 0)).add(V3(0, 0.5, 0)) : null, dose: () => waterPlant() } });
+const handMirrorObj = new THREE.Group();
+D(new THREE.CylinderGeometry(0.06, 0.06, 0.01, 24).rotateX(Math.PI / 2), M.silver, 0, 0, -0.03, handMirrorObj);
+D(new THREE.TorusGeometry(0.06, 0.008, 8, 24), M.brass, 0, 0, -0.03, handMirrorObj);
+D(new THREE.CylinderGeometry(0.01, 0.012, 0.1, 10), M.brass, 0, -0.11, -0.03, handMirrorObj);
+finishItem(handMirrorObj, { item: 'mirror', onGrab: () => { if (!st.mirrorTaken) { st.mirrorTaken = true; notify('Käsipeegel! 🪞 Suuna see peegelkirjale.', 3); } } });
+const greenKeyObj = buildKey(new THREE.MeshLambertMaterial({ color: 0x66bb6a, emissive: 0x1b5e20 }), 1.3);
+finishItem(greenKeyObj, { item: 'greenkey', enabled: () => st.grown });
+const ballObjs = [0xef5350, 0x42a5f5, 0xffca28].map(col => {
+  const g = new THREE.Group(); D(new THREE.SphereGeometry(0.07, 18, 14), new THREE.MeshLambertMaterial({ color: col }), 0, 0, 0, g);
+  const o = finishItem(g, { item: 'ball', enabled: () => st.toyOpen && !g.userData.ia.scored });
+  return o;
+});
+Object.assign(items, {
+  torch: { obj: torchObj, home: roomG[3], pos: V3(1.6, 0.9, -15.7), rotY: 0.5 },
+  seed: { obj: seedObj, home: potDrawer, pos: V3(-2.58, 0.672, -23.5), rotY: 0 },
+  can: { obj: canObj, home: roomG[4], pos: V3(2.4, 0.75, -22.4), rotY: Math.PI },
+  mirror: { obj: handMirrorObj, home: roomG[5], pos: V3(-2.8, 1.215, -28.6), rotY: Math.PI / 2 },
+  greenkey: { obj: greenKeyObj, home: flower, pos: V3(0, 0.02, 0), rotY: 0, hidden: true }
+});
+ballObjs.forEach((o, i) => items['ball' + i] = { obj: o, home: toyBox, pos: V3(-0.2 + i * 0.2, 0.03, 0), rotY: 0 });
+// rohelise võtme lukk kasvuhoone uksel
+const greenLock = new THREE.Group(); greenLock.position.set(0.86, 1.25, 0.03); DOORS[4].pivot.add(greenLock);
+D(new THREE.BoxGeometry(0.1, 0.14, 0.012), new THREE.MeshLambertMaterial({ color: 0x66bb6a, emissive: 0x0b3d0b }), 0, 0, 0, greenLock);
+D(new THREE.CircleGeometry(0.012, 12), M.black, 0, 0.015, 0.007, greenLock);
+makeIA(greenLock, { accepts: 'greenkey', onUse: h => { consume(h); sfx.unlock(); notify('Roheline võti sobib! 🌱', 3); requestDoor(4); }, onClick: () => { sfx.bad(); notify('Lukk on roheline – vaja on rohelist võtit 🗝️'); }, enabled: () => !st.door[4] });
+
+/* =========================================================
+   ÕPPIMISE REŽIIM – teadmiste lukud uste kõrval
+   ========================================================= */
+const EST_Q = [
+  ['Mis on sõna „suur“ vastand?', 'väike', 'pikk', 'lai', 'kõrge'],
+  ['Mis on sõna „soe“ vastand?', 'külm', 'märg', 'kuiv', 'kerge'],
+  ['Mis on sõna „vana“ vastand?', 'uus', 'suur', 'hea', 'kole'],
+  ['Mis on sõna „kiire“ vastand?', 'aeglane', 'kerge', 'lühike', 'tugev'],
+  ['Milline sõna on õigesti kirjutatud?', 'jäätis', 'jäädis', 'jäätiss', 'jätis'],
+  ['Milline sõna on õigesti kirjutatud?', 'kartul', 'kartull', 'gartul', 'kardul'],
+  ['Mitu silpi on sõnas „kassipoeg“?', '3', '2', '4', '5'],
+  ['Mitu tähte on sõnas „päike“?', '5', '4', '6', '3'],
+  ['Mis on sõna „koer“ mitmus?', 'koerad', 'koerid', 'koeraid', 'koerud'],
+  ['Mis on sõna „lind“ mitmus?', 'linnud', 'lindud', 'linnad', 'lindad'],
+  ['Mis on sõna „laps“ mitmus?', 'lapsed', 'lapsid', 'lapsad', 'lapsud'],
+  ['Milline täht on täishäälik?', 'Õ', 'K', 'S', 'T'],
+  ['Milline sõna on tegusõna?', 'jooksma', 'kiire', 'laud', 'roheline'],
+  ['Milline sõna on omadussõna?', 'ilus', 'laulma', 'maja', 'kiiresti'],
+  ['Milline sõna on nimisõna?', 'kass', 'sööma', 'punane', 'kiiresti'],
+  ['Milline sõna on liitsõna?', 'koolimaja', 'kool', 'majake', 'koolis'],
+  ['Mis on sõna „rõõmus“ sünonüüm?', 'õnnelik', 'kurb', 'vihane', 'väsinud'],
+  ['Milline sõna algab täishäälikuga?', 'õun', 'kala', 'puu', 'tuba'],
+  ['Mis on Eesti pealinn?', 'Tallinn', 'Tartu', 'Pärnu', 'Narva']
+];
+const ENG_W = [['koer', 'dog'], ['kass', 'cat'], ['hobune', 'horse'], ['lind', 'bird'], ['kala', 'fish'], ['maja', 'house'], ['puu', 'tree'], ['päike', 'sun'], ['kuu', 'moon'], ['täht', 'star'], ['õun', 'apple'], ['raamat', 'book'], ['laud', 'table'], ['tool', 'chair'], ['aken', 'window'], ['uks', 'door'], ['vesi', 'water'], ['piim', 'milk'], ['leib', 'bread'], ['punane', 'red'], ['sinine', 'blue'], ['roheline', 'green'], ['suur', 'big'], ['väike', 'small'], ['kool', 'school'], ['sõber', 'friend'], ['ema', 'mother'], ['isa', 'father'], ['jooksma', 'run'], ['lugema', 'read']];
+function optsQ(q, right, wrongs){ const opts = shuffle([right, ...shuffle(wrongs.filter(w => w !== right)).slice(0, 3)]); return { q, a: opts, c: opts.indexOf(right) }; }
+function numOpts(q, ans){ const s = new Set([ans]); for (const d of shuffle([1, -1, 2, -2, 10, -10, 3, 5])) { if (s.size >= 4) break; if (ans + d >= 0) s.add(ans + d); } return optsQ(q, String(ans), [...s].filter(v => v !== ans).map(String)); }
+function customQuestions(){ return (store('pt_questions') || '').split('\n').map(l => l.split('|').map(s => s.trim())).filter(p => p.length >= 3 && p[0] && p[1]); }
+function genQuestion(){
+  const kind = settings.learn, d = settings.diff;
+  if (kind === 'own') { const cq = customQuestions(); if (cq.length) { const p = pick(cq); return optsQ(p[0], p[1], p.slice(2)); } }
+  if (kind === 'est') { const p = pick(EST_Q); return optsQ(p[0], p[1], p.slice(2)); }
+  if (kind === 'eng') { const w = pick(ENG_W); return rand() < 0.5 ? optsQ(`Mis on inglise keeles „${w[0]}“?`, w[1], ENG_W.map(x => x[1])) : optsQ(`Mida tähendab „${w[1]}“?`, w[0], ENG_W.map(x => x[0])); }
+  let a, b, c;
+  if (d === 'kerge') { a = randInt(1, 10); b = randInt(1, 10); if (rand() < 0.5) return numOpts(`${a} + ${b} = ?`, a + b); if (a < b) [a, b] = [b, a]; return numOpts(`${a} − ${b} = ?`, a - b); }
+  if (d === 'tavaline') { const r = rand(); a = randInt(2, 10); b = randInt(2, 10); if (r < 0.4) return numOpts(`${a} · ${b} = ?`, a * b); if (r < 0.6) return numOpts(`${a * b} : ${a} = ?`, b); a = randInt(10, 60); b = randInt(5, 39); return rand() < 0.5 ? numOpts(`${a} + ${b} = ?`, a + b) : numOpts(`${a + b} − ${b} = ?`, a); }
+  a = randInt(2, 12); b = randInt(2, 12); c = randInt(2, 20); const r = rand();
+  if (r < 0.35) return numOpts(`${a} · ${b} + ${c} = ?`, a * b + c);
+  if (r < 0.7) return numOpts(`(${a} + ${c}) · ${b} = ?`, (a + c) * b);
+  return numOpts(`${a * b * 2} : ${b} − ${a} = ?`, a);
+}
+const quizPanels = DOORS.map((d, i) => {
+  const g = new THREE.Group(); g.position.set(-1.0, 1.45, d.z + 0.03); roomG[i].add(g);
+  S(new THREE.BoxGeometry(0.66, 0.42, 0.02), M.darkMetal, 0, 0, -0.012, g);
+  const qp = new CanvasPlane(0.62, 0.2, 900); qp.mesh.position.set(0, 0.1, 0.001); g.add(qp.mesh);
+  const btns = [0, 1, 2, 3].map(k => {
+    const cp = new CanvasPlane(0.3, 0.07, 900); cp.mesh.position.set(k % 2 ? 0.155 : -0.155, -0.04 - Math.floor(k / 2) * 0.085, 0.002); g.add(cp.mesh);
+    makeIA(cp.mesh, { scaleHover: true, onClick: () => answerQuiz(i, k), enabled: () => !st.quiz[i].done });
+    return cp;
+  });
+  return { g, qp, btns };
+});
+function drawQuiz(i){
+  const qs = st.quiz[i], p = quizPanels[i];
+  p.qp.draw((c, W, H) => {
+    c.fillStyle = qs.done ? '#1b5e20' : '#0d2533'; roundRect(c, 2, 2, W - 4, H - 4, 18); c.fill();
+    c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.15}px ${FONT}`; c.textAlign = 'left'; c.textBaseline = 'middle';
+    c.fillText('📚 Teadmiste lukk', W * 0.04, H * 0.16);
+    c.textAlign = 'right'; c.fillText(qs.done ? '✅' : '✔'.repeat(qs.got) + '◻'.repeat(Math.max(0, QUIZ_NEED - qs.got)), W * 0.96, H * 0.16);
+    c.fillStyle = '#fff'; c.textAlign = 'center';
+    if (qs.done) { c.font = `bold ${H * 0.22}px ${FONT}`; c.fillText('Lukk avatud! 🎉', W / 2, H * 0.6); }
+    else fitText(c, qs.q.q, W / 2, H * 0.3, W * 0.92, H * 0.66, Math.round(H * 0.2), true);
+  });
+  p.btns.forEach((b, k) => { b.mesh.visible = !qs.done; if (qs.done) return; b.draw((c, W, H) => { c.fillStyle = '#37474f'; roundRect(c, 3, 3, W - 6, H - 6, 14); c.fill(); c.strokeStyle = '#90a4ae'; c.lineWidth = 4; c.stroke(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle'; let f = H * 0.5; c.font = `bold ${f}px ${FONT}`; const t = qs.q.a[k] ?? ''; while (c.measureText(t).width > W * 0.9 && f > 10) { f -= 1; c.font = `bold ${f}px ${FONT}`; } c.fillText(t, W / 2, H * 0.55); }); });
+}
+const QUIZ_NEED = 2;
+function answerQuiz(i, k){
+  const qs = st.quiz[i]; if (qs.done || k >= qs.q.a.length) return;
+  if (k === qs.q.c) { qs.got++; sfx.ok(); if (qs.got >= QUIZ_NEED) { qs.done = true; notify('Teadmiste lukk avatud! 📚✅', 3); if (st.pending[i]) delay(0.6, () => openDoor(i)); } else notify('Õige! ✔ Veel üks küsimus.'); }
+  else { sfx.bad(); notify(`Vale vastus. Õige oli: ${qs.q.a[qs.q.c]}`, 3); }
+  if (!qs.done) qs.q = genQuestion();
+  drawQuiz(i);
+}
+function requestDoor(i){
+  if (st.door[i]) return;
+  if (settings.learn !== 'off' && !st.quiz[i].done) { st.pending[i] = true; notify('Lukk avanes! Vasta veel teadmiste luku küsimustele 📚', 4); return; }
+  openDoor(i);
 }
 
 /* =========================================================
@@ -1105,43 +1489,49 @@ const DIFF = {
   tavaline: { label: 'Tavaline', hints: 5, melody: 5, colors: 2, maxCount: 3 },
   raske: { label: 'Raske', hints: 2, melody: 6, colors: 3, maxCount: 3 }
 };
-const settings = Object.assign({ diff: 'tavaline', timer: 0, music: true }, store('pt_settings') || {});
+const settings = Object.assign({ diff: 'tavaline', timer: 0, music: true, rooms: 3, learn: 'off' }, store('pt_settings') || {});
 if (!DIFF[settings.diff]) settings.diff = 'tavaline';
+settings.rooms = clamp(settings.rooms | 0 || 3, 1, 7);
 const best = store('pt_best') || {};
+const bestKey = () => `${settings.diff}_${settings.rooms}`;
+const LEARN = [['off', 'Väljas'], ['math', '➗ Matem.'], ['est', '📖 Eesti k.'], ['eng', '🇬🇧 Inglise'], ['own', '✏️ Oma']];
 const menuUI = new THREE.Group(); scene.add(menuUI);
-const MPW = 1.6, MPH = 1.1;
-const menuPanel = new CanvasPlane(MPW, MPH, 700, true); menuUI.add(menuPanel.mesh); makeIA(menuPanel.mesh, { ui: true, noHover: true });
+const MPW = 1.7, MPH = 1.42;
+const menuPanel = new CanvasPlane(MPW, MPH, 650, true); menuUI.add(menuPanel.mesh); makeIA(menuPanel.mesh, { ui: true, noHover: true });
 const mY = y => (MPH / 2 - y) / MPH;
+const ROW = { diff: 0.42, timer: 0.3, rooms: 0.18, learn: 0.06, music: -0.06 };
 function drawMenu(){
   menuPanel.draw((c, W, H) => {
     panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.08}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.47));
-    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.04}px ${FONT}`; c.fillText('Professor Nupu maja • 3 tuba: töötuba → labor → tähetorn', W / 2, H * mY(0.39));
-    c.fillStyle = '#fff'; c.textAlign = 'left'; c.font = `bold ${H * 0.042}px ${FONT}`;
-    c.fillText('Raskusaste', W * 0.05, H * mY(0.25)); c.fillText('Taimer', W * 0.05, H * mY(0.12)); c.fillText('Muusika', W * 0.05, H * mY(-0.01));
-    c.textAlign = 'center'; c.fillStyle = '#b0bec5'; c.font = `${H * 0.034}px ${FONT}`;
-    const b = best[settings.diff];
-    c.fillText(b ? `🏆 Parim aeg (${DIFF[settings.diff].label}): ${fmtTime(b.t)} • ${'★'.repeat(b.s)}` : `🏆 Parimat aega (${DIFF[settings.diff].label}) veel pole`, W / 2, H * mY(-0.13));
-    c.fillStyle = '#90a4ae'; c.font = `${H * 0.03}px ${FONT}`;
-    c.fillText('Päästik = kasuta / võta • Külgnupp = haara • Vasak kang = liigu • Parem kang = pööra', W / 2, H * mY(-0.46));
-    c.fillText('Y / B = paus • X / A = pane ese maha', W / 2, H * mY(-0.505));
+    c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.065}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.62));
+    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Professor Nupu maja • kuni 7 tuba • pultidega või paljaste kätega', W / 2, H * mY(0.545));
+    c.fillStyle = '#fff'; c.textAlign = 'left'; c.font = `bold ${H * 0.033}px ${FONT}`;
+    c.fillText('Raskusaste', W * 0.03, H * mY(ROW.diff)); c.fillText('Taimer', W * 0.03, H * mY(ROW.timer)); c.fillText('Tubade arv', W * 0.03, H * mY(ROW.rooms)); c.fillText('Õppimine', W * 0.03, H * mY(ROW.learn)); c.fillText('Muusika', W * 0.03, H * mY(ROW.music));
+    c.textAlign = 'center'; c.fillStyle = '#b0bec5'; c.font = `${H * 0.028}px ${FONT}`;
+    const b = best[bestKey()];
+    c.fillText(b ? `🏆 Parim aeg (${DIFF[settings.diff].label}, ${settings.rooms} tuba): ${fmtTime(b.t)} • ${'★'.repeat(b.s)}` : `🏆 Parimat aega (${DIFF[settings.diff].label}, ${settings.rooms} tuba) veel pole`, W / 2, H * mY(-0.17));
+    c.fillStyle = '#90a4ae'; c.font = `${H * 0.024}px ${FONT}`;
+    c.fillText('PULDID: päästik = kasuta/võta • külgnupp = haara • vasak kang = liigu • parem kang = pööra • Y/B = paus', W / 2, H * mY(-0.5));
+    c.fillText('KÄED: näpista = võta/kasuta • näpista põrandale = teleport • vajuta nuppe sõrmega • viska käega • vasaku randme ⏸ nupp = paus', W / 2, H * mY(-0.55));
+    c.fillText('Õpetaja küsimused saab sisestada arvutis (nupp "📚 Õpetaja küsimused" lehe ülaosas).', W / 2, H * mY(-0.6));
   });
 }
-const optBtns = { diff: [], timer: [], music: [] };
+const optBtns = { diff: [], timer: [], rooms: [], learn: [], music: [] };
 function paintOpts(){
   optBtns.diff.forEach(b => b.userData.paint(b.userData.val === settings.diff ? '#2e7d32' : '#37474f', undefined, b.userData.val === settings.diff));
   optBtns.timer.forEach(b => b.userData.paint(b.userData.val === settings.timer ? '#1565c0' : '#37474f', undefined, b.userData.val === settings.timer));
+  optBtns.rooms.forEach(b => b.userData.paint(b.userData.val === settings.rooms ? '#e65100' : '#37474f', undefined, b.userData.val === settings.rooms));
+  optBtns.learn.forEach(b => b.userData.paint(b.userData.val === settings.learn ? '#00838f' : '#37474f', undefined, b.userData.val === settings.learn));
   optBtns.music[0].userData.paint(settings.music ? '#6a1b9a' : '#37474f', settings.music ? '🎵 Sees' : '🔇 Väljas', settings.music);
   drawMenu(); store('pt_settings', settings);
 }
-[['kerge', '🙂 Kerge'], ['tavaline', '😐 Tavaline'], ['raske', '😈 Raske']].forEach(([v, l], i) => {
-  const b = makeButton(l, 0.33, 0.09, () => { settings.diff = v; paintOpts(); }, { fs: 0.42 }); b.userData.val = v; b.position.set(-0.22 + i * 0.36, 0.25, 0.01); menuUI.add(b); optBtns.diff.push(b);
-});
-[[0, '⏳ Väljas'], [30, '30 min'], [45, '45 min']].forEach(([v, l], i) => {
-  const b = makeButton(l, 0.33, 0.09, () => { settings.timer = v; paintOpts(); }, { fs: 0.42 }); b.userData.val = v; b.position.set(-0.22 + i * 0.36, 0.12, 0.01); menuUI.add(b); optBtns.timer.push(b);
-});
-{ const b = makeButton('🎵 Sees', 0.33, 0.09, () => { settings.music = !settings.music; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.22, -0.01, 0.01); menuUI.add(b); optBtns.music.push(b); }
-{ const b = makeButton('▶ Alusta', 0.55, 0.14, () => newGame(), { color: '#e65100', fs: 0.45 }); b.position.set(0, -0.3, 0.01); menuUI.add(b); }
+const addOpt = (key, val, label, x, y, w) => { const b = makeButton(label, w, 0.085, () => { settings[key] = val; paintOpts(); }, { fs: 0.42 }); b.userData.val = val; b.position.set(x, y, 0.01); menuUI.add(b); optBtns[key].push(b); };
+[['kerge', '🙂 Kerge'], ['tavaline', '😐 Tavaline'], ['raske', '😈 Raske']].forEach(([v, l], i) => addOpt('diff', v, l, -0.25 + i * 0.36, ROW.diff, 0.33));
+[[0, '⏳ Väljas'], [30, '30 min'], [45, '45 min']].forEach(([v, l], i) => addOpt('timer', v, l, -0.25 + i * 0.36, ROW.timer, 0.33));
+for (let n = 1; n <= 7; n++) addOpt('rooms', n, String(n), -0.36 + (n - 1) * 0.15, ROW.rooms, 0.13);
+LEARN.forEach(([v, l], i) => addOpt('learn', v, l, -0.36 + i * 0.235, ROW.learn, 0.22));
+{ const b = makeButton('🎵 Sees', 0.33, 0.085, () => { settings.music = !settings.music; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.25, ROW.music, 0.01); menuUI.add(b); optBtns.music.push(b); }
+{ const b = makeButton('▶ Alusta', 0.55, 0.13, () => newGame(), { color: '#e65100', fs: 0.45 }); b.position.set(0, -0.33, 0.01); menuUI.add(b); }
 paintOpts();
 const pauseUI = new THREE.Group(); pauseUI.visible = false; scene.add(pauseUI);
 const pausePanel = new CanvasPlane(0.9, 0.36, 700, true); pausePanel.mesh.position.y = 0.4; pauseUI.add(pausePanel.mesh); makeIA(pausePanel.mesh, { ui: true, noHover: true });
@@ -1171,9 +1561,14 @@ const RIDDLES = [
   ['Mis arv tuleb järgmisena: 2, 4, 6, …?', 8],
   ['Mis on pool kümnest pluss neli?', 9]
 ];
-const START_TEXT = 'Tere, uurija! 🕵️\n\nLukustasin su oma majja. Siin on kolm tuba: töötuba, labor ja tähetorn. Iga uks avaneb isemoodi.\n\nSelle toa uks avaneb 4-numbrilise koodiga. Ukse kohal olev silt ütleb, mis järjekorras numbrid tulevad.\n\nKui jääd hätta, helista laual olevat kella 🔔\n\n– Professor Nupp';
+function startText(){ const n = settings.rooms; return `Tere, uurija! 🕵️\n\nLukustasin su oma majja. ${n > 1 ? `Sul tuleb läbida ${n} tuba – iga uks avaneb isemoodi.` : 'Pääse sellest toast välja!'}\n\nSelle toa uks avaneb 4-numbrilise koodiga. Ukse kohal olev silt ütleb, mis järjekorras numbrid tulevad.\n\nKui jääd hätta, helista laual olevat kella 🔔\n\n– Professor Nupp`; }
 const LAB_TEXT = 'Tubli, pääsesid laborisse! 🧪\n\nJärgmise ukse avab laserkiir – aga laserist on kristall puudu. Kristall on vitriinis, mis avaneb ainult õige võlujoogiga.\n\nRetsept on seinal, kuid kogused kirjutasin pisikeselt. Luubi panin kaalulaua sahtlisse – see avaneb, kui kaal on tasakaalus.\n\n– Professor Nupp';
 const OBS_TEXT = 'Viimane tuba – minu tähetorn! 🔭\n\nVäljapääsu kuldvõti on seifis. Seifi kood koosneb kolmest numbrist: üks peitub tähtede seas, teine muusikas ja kolmas varjus.\n\nPalju õnne!\n– Professor Nupp';
+const ROOM_TEXTS = [null, ['🧪 Labor', LAB_TEXT], ['🔭 Tähetorn', OBS_TEXT],
+  ['🔦 Kelder', 'Siin on pime nagu kotis! 🔦\n\nUkse avab surve: keera kolm ventiili õigeks. Õiged numbrid kirjutasin kriidiga seinale – aga ilma valguseta ei näe sa midagi. Taskulamp on ukse kõrval tünni peal.\n\n– Professor Nupp'],
+  ['🌱 Kasvuhoone', 'Tere tulemast kasvuhoonesse! 🌱\n\nVõti kasvab siin lille sees. Leia seemned, istuta need suurde potti ja kasta taime.\n\n– Professor Nupp'],
+  ['📻 Raadiotuba', 'Raadiotuba 📻\n\nMinu salajane raadiojaam saadab koodi morsetähestikus. Jaama sageduse kirjutasin peegelkirjas seinale – riiulil on käsipeegel.\n\n– Professor Nupp'],
+  ['🎈 Mängutuba', 'Mängutuba! 🎈\n\nAva mänguasjakast õigete hoobadega (vaata maali) ja viska kolm palli korvi – aga ainult viskejoone tagant!\n\n– Professor Nupp']];
 
 let P = {}, st = {}, mode = 'menu', elapsed = 0, entry = '', kpMsg = null;
 function setupPuzzle(){
@@ -1186,20 +1581,28 @@ function setupPuzzle(){
     W: randInt(6, 12), recipe, flip: rand() < 0.5,
     dTele: randInt(1, 9), dPiano: randInt(1, 9), dShadow: randInt(1, 9), shadowK: randInt(0, 7),
     melody: Array.from({ length: dc.melody }, () => randInt(0, 6)),
-    gearSpots: shuffle(GEAR_SPOTS.slice()).slice(0, 3)
+    gearSpots: shuffle(GEAR_SPOTS.filter(g => roomIdx(g[2]) < settings.rooms)).slice(0, 3),
+    valves: [randInt(0, 5), randInt(0, 5), randInt(0, 5)], freq: randInt(89, 107), radioCode: [randInt(0, 9), randInt(0, 9), randInt(0, 9)],
+    levers: [0, 1, 2, 3].map(() => rand() < 0.5)
   };
   P.code = `${P.d1}${P.d2}${P.d3}${P.d4}`;
   P.safeCode = [P.dTele, P.dPiano, P.dShadow];
   st = {
     ring: lock.map(c => (c + randInt(1, 4)) % 5), drawerOpen: false, uvTaken: false, uvReveal: 0, uvFound: false,
     globeK: P.globeK, globeBusy: false, globeOpen: false, keyTaken: false, chestOpen: false, fuseIn: false, riddleRead: false,
-    door: [false, false, false], visited: [true, false, false],
+    door: ROOMS.map(() => false), visited: ROOMS.map((_, i) => i === 0), pending: ROOMS.map(() => false),
     scaleDone: false, luupTaken: false, recipeRead: false, mix: { r: 0, b: 0, y: 0 }, potionBad: false, potionDone: false,
     crystalTaken: false, crystalIn: false, mirrorK: [0, 0, 0],
     vaseShaken: false, vaseBroken: false, lensTaken: false, lensIn: false, teleSeen: false,
     shadowK: (P.shadowK + randInt(2, 6)) % 8, shadowSeen: false, melPos: 0, melodyDone: false, pianoRead: false, playing: false, boxOpen: false,
-    safeWheel: [0, 0, 0], safeOpen: false, goldTaken: false, gears: 0, hints: 0, timerOff: false, warned: {}
+    safeWheel: [0, 0, 0], safeOpen: false, goldTaken: false, gears: 0, hints: 0, timerOff: false, warned: {},
+    torchTaken: false, valves: [0, 0, 0], seeded: false, water: 0, grown: false, mirrorTaken: false, mirrorRead: false, freq: 88, morseTok: 0, codeWheel: [0, 0, 0],
+    levers: [false, false, false, false], toyOpen: false, balls: 0, quiz: ROOMS.map(() => ({ got: 0, done: false, q: null }))
   };
+  do { st.valves = [randInt(0, 5), randInt(0, 5), randInt(0, 5)]; } while (st.valves.every((v, i) => v === P.valves[i]));
+  do { st.levers = [0, 1, 2, 3].map(() => rand() < 0.5); } while (st.levers.every((v, i) => v === P.levers[i]));
+  st.freq = P.freq > 98 ? randInt(88, 92) : randInt(104, 108);
+  st.quiz.forEach(q => q.q = genQuestion());
   do { st.mirrorK = [randInt(0, 3), randInt(0, 3), randInt(0, 3)]; } while (traceLaser(true).hit);
 }
 function resetItems(){
@@ -1243,12 +1646,26 @@ function applyPuzzle(){
   goldInLock.visible = false;
   gears.forEach((g, i) => { const s = P.gearSpots[i]; roomAt(s[2]).add(g); g.position.set(s[0], s[1], s[2]); g.visible = true; });
   flaskInfo.mesh.visible = settings.diff !== 'raske';
+  // toad 4–7
+  const n = settings.rooms;
+  outsideBox.position.set(0, 1.15, ROOMS[n - 1].z0 - 0.65); outLight.position.set(0, 1.6, ROOMS[n - 1].z0 - 0.6); exitSign.position.set(0, 2.5, ROOMS[n - 1].z0 + 0.016);
+  DOORS.forEach((d, i) => d.pivot.visible = i < n);
+  valves.forEach((v, i) => { v.rotation.x = 0; drawGauge(i); }); drawChalk();
+  potDrawer.position.x = 0; plant.visible = false; plant.scale.setScalar(0.08); petals.forEach(p => p.rotation.z = 0);
+  drawDial(); radioLamp.material.color.set(0x331100); drawMirrorText(); [0, 1, 2].forEach(drawCodeWheel);
+  levers.forEach((g, i) => g.rotation.z = st.levers[i] ? 0.6 : Math.PI - 0.6); drawLeverPic(); toyLid.rotation.x = 0;
+  basketLamps.forEach(l => l.material.color.set(0x333333)); ballObjs.forEach(b => b.userData.ia.scored = false);
+  for (const f of flying) f.it.userData.ia.flying = false; flying.length = 0;
+  quizPanels.forEach((p, i) => { p.g.visible = settings.learn !== 'off' && i < n; drawQuiz(i); });
   resetItems();
   rebuildColliders();
 }
 
 /* ---------- tuba 1 tegevused ---------- */
-function setLights(v){ hemi.intensity = 1.1 + 1.1 * v; ceilLight.intensity = 9 * v; M.ceil.color.set(0x3b352d).lerp(new THREE.Color(0xbdb5a3), clamp(v, 0, 1)); bulbMat.emissive.setRGB(1, 0.95, 0.8).multiplyScalar(0.12 + 0.88 * v); }
+let lightV = 0;
+const ROOM_LIGHT = [[0, 2.1, 0, 0xfff1dc, () => 9 * lightV], [0, 2.2, -6, 0xf2f8ff, () => 8], [0, 2.25, -12, 0xffc98a, () => 5], [0, 2.2, -18, 0x8899aa, () => 0], [0, 2.3, -24, 0xf4ffe8, () => 9], [0, 2.2, -30, 0xffd9a0, () => 5], [0, 2.2, -36, 0xffffff, () => 8]];
+function setRoomLight(L, i){ if (i < 0) { L.intensity = 0; return; } const c = ROOM_LIGHT[i]; L.position.set(c[0], c[1], c[2]); L.color.set(c[3]); L.intensity = c[4](); }
+function setLights(v){ lightV = v; M.ceil.color.set(0x3b352d).lerp(new THREE.Color(0xbdb5a3), clamp(v, 0, 1)); bulbMat.emissive.setRGB(1, 0.95, 0.8).multiplyScalar(0.12 + 0.88 * v); }
 function setKeypadPower(on){
   ledMat.color.set(on ? 0x003300 : 0x330000); ledMat.emissive.set(on ? 0x00ff44 : 0x550000);
   kpButtons.forEach(b => b.material.color.set(on ? 0xffffff : 0x666666)); drawKeypad();
@@ -1268,7 +1685,7 @@ function clickRing(i){
   m.material.color.set(COLS[st.ring[i]][1]);
   tween(0.25, k => m.rotation.x = r0 + ease(k) * Math.PI * 2 / 5);
   tone(900, .03, 0, 'square', .06);
-  if (st.ring.every((c, j) => c === P.lock[j])) { st.drawerOpen = true; delay(0.35, () => { sfx.unlock(); notify('Klõps! Sahtel avanes 🔓'); tween(0.9, k => drawer.position.x = -0.42 * ease(k)); }); }
+  if (st.ring.every((c, j) => c === P.lock[j])) { st.drawerOpen = true; delay(0.35, () => { sfx.unlock(); const amt = renderer.xr.isPresenting ? 0.07 : 0.42; notify(renderer.xr.isPresenting ? 'Klõps! 🔓 Tõmba sahtel käepidemest lahti.' : 'Klõps! Sahtel avanes 🔓'); tween(0.9, k => drawer.position.x = -amt * ease(k)); }); }
 }
 function clickGlobe(){
   if (st.globeBusy) return;
@@ -1296,7 +1713,7 @@ function keyPress(k){
   if (k === 'C') entry = '';
   else if (k === 'OK') {
     if (entry.length < 4) notify('Kood on 4 numbrit');
-    else if (entry === P.code) { kpMsg = { t: 'AVATUD', col: '#5dff7a' }; drawKeypad(); sfx.unlock(); notify('Uks avanes! Edasi laborisse 🧪', 3.5); delay(0.5, () => openDoor(0)); return; }
+    else if (entry === P.code) { kpMsg = { t: 'AVATUD', col: '#5dff7a' }; drawKeypad(); sfx.unlock(); notify('Kood õige! 🔓', 3); delay(0.5, () => requestDoor(0)); return; }
     else { kpMsg = { t: 'VALE', col: '#ff4d4d' }; entry = ''; sfx.bad(); delay(1.0, () => { kpMsg = null; drawKeypad(); }); }
   }
   else if (entry.length < 4) entry += k;
@@ -1352,7 +1769,7 @@ function addDose(ck){
   if (st.mix.r > R.r || st.mix.b > R.b || st.mix.y > R.y) { st.potionBad = true; updateLiquid(); delay(0.4, () => { sfx.gurgle(); notify('Pahh! Vale segu 🤢 Tühjenda kolb punasest kraanist.', 3.5); }); return; }
   if (st.mix.r === R.r && st.mix.b === R.b && st.mix.y === R.y) {
     st.potionDone = true; updateLiquid();
-    delay(0.4, () => { sfx.reveal(); notify('Võlujook õnnestus! ✨ Vitriin avanes.', 3.5); tween(1.0, k => vitDoor.rotation.y = -1.7 * ease(k)); });
+    delay(0.4, () => { sfx.reveal(); notify('Võlujook õnnestus! ✨ Vitriin avanes.', 3.5); const amt = renderer.xr.isPresenting ? 0.3 : 1.7; tween(1.0, k => vitDoor.rotation.y = -amt * ease(k)); });
   }
 }
 function drainFlask(){
@@ -1404,7 +1821,7 @@ function traceLaser(dry = false){
   const e = segs[segs.length - 1]; beamDot.visible = on; if (on) beamDot.position.set(e[2], 1.2, e[3]);
   if (on && hit && !st.door[1]) {
     recLens.material.color.set(0x00ff66); recLens.material.emissive.set(0x00aa44);
-    sfx.unlock(); notify('Kiir tabas vastuvõtjat! 🎯 Uks avaneb.', 3.5); delay(0.6, () => openDoor(1));
+    sfx.unlock(); notify('Kiir tabas vastuvõtjat! 🎯 Uks avaneb.', 3.5); delay(0.6, () => requestDoor(1));
   }
   return { hit, segs };
 }
@@ -1416,7 +1833,7 @@ function updateScale(dt){
   for (const p of pans) { const z0 = p.userData.z0; p.position.set(0, 0.46 - z0 * Math.sin(scaleTheta) - 0.22, z0 * Math.cos(scaleTheta)); }
   if (!st.scaleDone && sumR === P.W && Math.abs(scaleTheta) < 0.02) {
     st.scaleDone = true; sfx.unlock(); notify('Kaal on tasakaalus! ⚖️ Laua sahtel avanes.', 3.5);
-    tween(0.9, k => labDrawer.position.x = 0.35 * ease(k));
+    const amt = renderer.xr.isPresenting ? 0.06 : 0.35; tween(0.9, k => labDrawer.position.x = amt * ease(k));
   }
 }
 
@@ -1493,49 +1910,62 @@ function drawWheel(i){
 function trySafe(){
   if (st.safeWheel.every((v, i) => v === P.safeCode[i])) {
     st.safeOpen = true; sfx.unlock(); notify('Seif avanes! 🗝️ Seal on kuldvõti.', 3.5);
-    tween(1.2, k => safeDoor.rotation.y = -1.9 * ease(k));
+    const amt = renderer.xr.isPresenting ? 0.3 : 1.9; tween(1.2, k => safeDoor.rotation.y = -amt * ease(k));
   } else { sfx.bad(); notify('Seif ei avane – vale kood 🔒'); }
 }
 function useGoldKey(h){
   consume(h); goldInLock.visible = true; sfx.unlock(); notify('Kuldvõti sobib! 🎉', 3);
-  delay(0.6, () => openDoor(2, () => delay(0.6, win)));
+  delay(0.6, () => requestDoor(2));
 }
 function collectGear(g){ g.visible = false; st.gears++; sfx.collect(); notify(`Kuldne hammasratas leitud! ⚙️ ${st.gears}/3`, 3); }
 
 /* ---------- vihjed ---------- */
 function currentHint(){
-  if (!st.door[0]) {
+  const cur = st.door.findIndex((d, i) => !d && i < settings.rooms);
+  if (cur < 0) return 'Uks on lahti – mine välja! 🎉';
+  if (st.pending[cur] && !st.quiz[cur].done) return 'Mõistatus on lahendatud! Nüüd vasta ukse kõrval oleva teadmiste luku küsimustele 📚 (2 õiget vastust).';
+  if (cur === 0) {
     if (!st.drawerOpen) return 'Laua sahtlil on kolme värvirõngaga lukk. Vaata raamaturiiulit: kolm raamatut on teistest ettepoole lükatud. Nende värvid ülevalt alla on rõngaste õiged värvid vasakult paremale.';
-    if (!st.uvTaken) return 'Sahtel on lahti! Seal on UV-lamp. Võta see kätte (päästik või külgnupp).';
+    if (!st.uvTaken) return 'Sahtel on lahti! Seal on UV-lamp. Võta see kätte.';
     if (!st.uvFound) return 'UV-lamp näitab nähtamatut kirja. Suuna lamp seintele – proovi ukse vastas olevat seina.';
     if (!st.globeOpen) return 'Klõpsa maakeral, et seda keerata. Kui punane täht vaatab toa keskele, maakera avaneb.';
     if (!st.keyTaken && !st.chestOpen) return 'Maakera sees on võti. Võta see kätte.';
     if (!st.chestOpen) return 'Võti avab toa nurgas oleva kirstu. Hoia võtit käes ja klõpsa kirstu lukul.';
-    if (!st.fuseIn) return 'Kirstus on kaitse. Pane see ukse kõrval olevasse elektrikilpi: hoia kaitset käes ja klõpsa kilbil.';
-    if (!st.riddleRead) return 'Kirstus on ka paber mõistatusega. Klõpsa sellel, et lugeda.';
-    return 'Ukse kohal olev silt ütleb numbrite järjekorra: 1) UV-kirja number, 2) mitu parti on toas, 3) mõistatuse vastus, 4) mitu tundi näitab kell. Pardid on peidus üle kogu toa – vaata ka laua alla, riiulitele ja nurkadesse!';
+    if (!st.fuseIn) return 'Kirstus on kaitse. Pane see ukse kõrval olevasse elektrikilpi.';
+    if (!st.riddleRead) return 'Kirstus on ka paber mõistatusega. Loe seda.';
+    return 'Ukse kohal olev silt ütleb numbrite järjekorra: 1) UV-kirja number, 2) mitu parti on toas, 3) mõistatuse vastus, 4) mitu tundi näitab kell. Pardid on peidus üle kogu toa!';
   }
-  if (!st.door[1]) {
-    if (!st.scaleDone) return 'Vasakul laual on kaal. Purgi kaal on teadmata – pane paremale kausile raskusi, kuni kaal on tasakaalus. Kaalu kallutus näitab, kumb pool on raskem.';
-    if (!st.luupTaken) return 'Kaalulaua sahtel avanes – seal on luup. Võta see kätte.';
-    if (!st.recipeRead) return 'Luubiga saab lugeda pisikest kirja. Hoia luupi käes ja suuna see seinal olevale retseptile.';
-    if (!st.potionDone) return 'Vala kolbi pudelitest täpselt retsepti järgi: hoia pudelit käes ja klõpsa kolvil (VR-is võid pudelit kolvi kohal kallutada). Kui segu läheb valeks, keera punast kraani.';
-    if (!st.crystalTaken) return 'Vitriin on lahti. Võta kristall 💎';
-    if (!st.crystalIn) return 'Pane kristall seinal olevasse laserisse: hoia kristalli käes ja klõpsa laseril.';
-    return 'Keera peegleid (klõpsa neil), et laserkiir põrkaks peeglilt peeglile ja jõuaks ukse kõrval olevasse vastuvõtjasse. Iga klõps keerab peeglit 45°.';
+  if (cur === 1) {
+    if (!st.scaleDone) return 'Vasakul laual on kaal. Pane paremale kausile raskusi, kuni kaal on tasakaalus. Kaalu kallutus näitab, kumb pool on raskem.';
+    if (!st.luupTaken) return 'Kaalulaua sahtel avanes – tõmba see lahti ja võta luup.';
+    if (!st.recipeRead) return 'Hoia luupi käes ja suuna see seinal olevale retseptile.';
+    if (!st.potionDone) return 'Vala kolbi pudelitest täpselt retsepti järgi: hoia pudelit käes ja klõpsa kolvil (VR-is kalluta pudelit kolvi kohal). Vale segu korral keera punast kraani.';
+    if (!st.crystalTaken) return 'Vitriin on lahti – tõmba ust ja võta kristall 💎';
+    if (!st.crystalIn) return 'Pane kristall seinal olevasse laserisse.';
+    return 'Keera peegleid (klõpsa neil), et laserkiir jõuaks ukse kõrval olevasse vastuvõtjasse. Iga klõps keerab peeglit 45°.';
   }
-  if (!st.lensIn) {
-    if (!st.vaseBroken) return 'Vaasis kõliseb midagi… Võta vaas kätte ja lase sel põrandale kukkuda!';
-    if (!st.lensTaken) return 'Kildude vahel on lääts. Võta see.';
-    return 'Pane lääts teleskoobi okulaari: hoia läätse käes ja klõpsa teleskoobil.';
+  if (cur === 2) {
+    if (!st.lensIn) { if (!st.vaseBroken) return 'Vaasis kõliseb midagi… Võta vaas ja lase sel põrandale kukkuda (või viska)!'; if (!st.lensTaken) return 'Kildude vahel on lääts. Võta see.'; return 'Pane lääts teleskoobi okulaari: hoia läätse käes ja klõpsa teleskoobil.'; }
+    if (!st.teleSeen) return 'Vaata teleskoobist – tähed moodustavad numbri.';
+    if (!st.melodyDone) return st.boxOpen ? 'Mängi muusikakarbi meloodia ksülofonil järele. Kalliskivi värv näitab, millist plaati lüüa. Kätega saad plaate sõrmega lüüa!' : 'Klõpsa muusikakarbil ja jäta värvide järjekord meelde.';
+    if (!st.pianoRead) return 'Ksülofoni ees olev karbike avanes – tõmba see lahti ja loe kaarti.';
+    if (!st.shadowSeen) return 'Keera laual olevat kuju. Ühes asendis näitab vari seinal numbrit.';
+    if (!st.safeOpen) return 'Seifi kood: 🔭 teleskoobi number, 🎹 ksülofoni kaardi number, 🕯️ varju number. Muuda numbreid ja vajuta käepidet.';
+    if (!st.goldTaken) return 'Tõmba seifi uks lahti ja võta kuldvõti 🗝️';
+    return 'Kuldvõti avab suure ukse. Hoia võtit käes ja klõpsa ukse lukul.';
   }
-  if (!st.teleSeen) return 'Klõpsa teleskoobil ja vaata läbi selle. Tähed moodustavad numbri.';
-  if (!st.melodyDone) return st.boxOpen ? 'Mängi muusikakarbi meloodia ksülofonil järele. Karbi kalliskivi värv näitab, millist plaati lüüa. Klõpsa karbil, et kuulata uuesti.' : 'Klõpsa muusikakarbil ja jäta meelde värvide järjekord.';
-  if (!st.pianoRead) return 'Ksülofoni ees olev karbike avanes. Loe sealt kaarti.';
-  if (!st.shadowSeen) return 'Keera laual olevat kuju (klõpsa alusel). Ühes asendis näitab vari seinal numbrit.';
-  if (!st.safeOpen) return 'Seifi kood: 🔭 teleskoobi number, 🎹 ksülofoni kaardi number, 🕯️ varju number. Klõpsa numbritel, et neid muuta, ja siis käepidemel.';
-  if (!st.goldTaken) return 'Võta seifist kuldvõti 🗝️';
-  return 'Kuldvõti avab suure ukse. Hoia võtit käes ja klõpsa ukse lukul.';
+  if (cur === 3) { if (!st.torchTaken) return 'Keldris on pime. Ukse kõrval tünni peal on taskulamp 🔦'; return 'Valgusta taskulambiga läänepoolset seina – seal on kriidiga kirjutatud õige surve. Keera ventiile (punane, roheline, sinine), kuni manomeetrid näitavad sama.'; }
+  if (cur === 4) {
+    if (!st.seeded) return 'Istutuslaua sahtlis on seemned – tõmba sahtel lahti, võta seemned ja pane need suurde potti.';
+    if (!st.grown) return `Kasta taime kastekannuga (laual). Hoia kannu poti kohal ja kalluta – või klõpsa potil. Kastetud ${st.water}/3.`;
+    return 'Lille sees on roheline võti – võta see ja pane ukse lukku.';
+  }
+  if (cur === 5) {
+    if (st.freq !== P.freq) return 'Seinal on peegelkiri – loe seda riiulil oleva käsipeegliga. Seal on raadiojaama sagedus. Keera raadiot nuppudega ◀ ▶.';
+    return 'Raadio piiksub morset. Tõlgi numbrid seinal oleva morsetabeli abil ja sisesta need ukse kõrval olevale lukule.';
+  }
+  if (!st.toyOpen) return 'Maal näitab, millised hoovad peavad olema üleval (🐦) ja millised all (🐟). Hoobadel on numbrid 1–4.';
+  return `Viska pallid korvi viskejoone tagant! VR-is viska käega, arvutis vajuta F (sihi hiirega). Korvis ${st.balls}/3.`;
 }
 function showHint(){
   if (mode !== 'play') return;
@@ -1551,7 +1981,7 @@ function newGame(){
   setupPuzzle(); applyPuzzle();
   elapsed = 0; mode = 'play';
   placePlayer(0, 1.3, 0);
-  openReader('✉️ Kiri laual', START_TEXT);
+  openReader('✉️ Kiri laual', startText());
 }
 function goMenu(){ tweens.length = 0; hideMenus(); mode = 'menu'; setupPuzzle(); applyPuzzle(); placePlayer(0, 1.3, 0); paintOpts(); placeInFront(menuUI, 1.4, -0.05); menuUI.visible = true; }
 function openPause(){
@@ -1563,7 +1993,7 @@ function openPause(){
     c.fillStyle = '#fff'; c.font = `${H * 0.12}px ${FONT}`;
     c.fillText(`Aeg ${fmtTime(elapsed)}${tm != null ? ` • jäänud ${fmtTime(tm)}` : ''}`, W / 2, H * 0.5);
     const max = DIFF[settings.diff].hints;
-    c.fillText(`Vihjeid ${st.hints}${max < Infinity ? '/' + max : ''} • ⚙️ ${st.gears}/3 • Tuba ${roomIdx(camZ()) + 1}/3`, W / 2, H * 0.74);
+    c.fillText(`Vihjeid ${st.hints}${max < Infinity ? '/' + max : ''} • ⚙️ ${st.gears}/3 • Tuba ${roomIdx(camZ()) + 1}/${settings.rooms}`, W / 2, H * 0.74);
   });
   pauseBtns[4].visible = renderer.xr.isPresenting;
   placeInFront(pauseUI, 1.1, -0.05); pauseUI.visible = true;
@@ -1579,8 +2009,8 @@ function timerLeft(){ return settings.timer > 0 && !st.timerOff ? settings.timer
 function win(){
   mode = 'win'; sfx.win(); closeReader();
   const stars = st.hints === 0 ? 3 : st.hints <= 3 ? 2 : 1;
-  const b = best[settings.diff]; let rec = false;
-  if (!b || elapsed < b.t) { best[settings.diff] = { t: elapsed, s: stars }; store('pt_best', best); rec = true; }
+  const b = best[bestKey()]; let rec = false;
+  if (!b || elapsed < b.t) { best[bestKey()] = { t: elapsed, s: stars }; store('pt_best', best); rec = true; }
   const msg = stars === 3 ? 'Suurepärane! Tõeline detektiiv! 🕵️' : stars === 2 ? 'Väga tubli!' : 'Pääsesid välja – hästi tehtud!';
   endPanel.draw((c, W, H) => {
     panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -1588,7 +2018,7 @@ function win(){
     c.font = `${H * 0.15}px ${FONT}`; c.fillText('★'.repeat(stars) + '☆'.repeat(3 - stars), W / 2, H * 0.33);
     c.fillStyle = '#fff'; c.font = `bold ${H * 0.07}px ${FONT}`; c.fillText(`Aeg ${fmtTime(elapsed)} • vihjeid ${st.hints} • ⚙️ ${st.gears}/3`, W / 2, H * 0.51);
     c.font = `${H * 0.06}px ${FONT}`; c.fillText(msg, W / 2, H * 0.63);
-    c.fillStyle = rec ? '#80ff9a' : '#9fb3bf'; c.fillText(rec ? `🏆 Uus rekord (${DIFF[settings.diff].label})!` : `🏆 Rekord: ${fmtTime(best[settings.diff].t)}`, W / 2, H * 0.74);
+    c.fillStyle = rec ? '#80ff9a' : '#9fb3bf'; c.fillText(rec ? `🏆 Uus rekord (${DIFF[settings.diff].label})!` : `🏆 Rekord: ${fmtTime(best[bestKey()].t)}`, W / 2, H * 0.74);
   });
   setEndButtons([['🔁 Uus mäng', '#2e7d32', () => newGame()], ['🏠 Menüü', '#455a64', () => goMenu()], renderer.xr.isPresenting ? ['🚪 Välju VR-ist', '#b71c1c', () => exitVR()] : null]);
   placeInFront(endUI, 1.2, -0.05); endUI.visible = true;
@@ -1619,23 +2049,176 @@ const raycaster = new THREE.Raycaster();
 const mouseHolder = new THREE.Group(); mouseHolder.position.set(0.17, -0.15, -0.4); camera.add(mouseHolder);
 const mouseHand = { kind: 'mouse', holder: mouseHolder, held: null };
 const xrHands = [];
+const handFactory = new XRHandModelFactory();
+const wristPause = makeButton('⏸', 0.06, 0.06, () => { if (mode === 'play') openPause(); else if (mode === 'pause') closePause(); }, { color: '#455a64', fs: 0.6 });
+wristPause.visible = false; scene.add(wristPause);
 for (let i = 0; i < 2; i++) {
-  const ctrl = renderer.xr.getController(i), grip = renderer.xr.getControllerGrip(i);
-  rig.add(ctrl); rig.add(grip);
+  const ctrl = renderer.xr.getController(i), grip = renderer.xr.getControllerGrip(i), hand = renderer.xr.getHand(i);
+  rig.add(ctrl); rig.add(grip); rig.add(hand);
+  hand.add(handFactory.createHandModel(hand, 'spheres'));
   const holder = new THREE.Group(); holder.position.set(0, -0.01, -0.07); ctrl.add(holder);
   const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
   line.visible = false; ctrl.add(line);
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffe066 })); dot.visible = false; scene.add(dot);
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.03, 0.11), new THREE.MeshLambertMaterial({ color: 0x2a2a2a })); body.position.z = 0.03; grip.add(body);
   const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1, 6).translate(0, -0.5, 0), new THREE.MeshBasicMaterial({ color: 0xffffff })); stream.visible = false; scene.add(stream);
-  const h = { kind: 'xr', ctrl, grip, holder, line, dot, stream, pourT: 0, held: null, bySqueeze: false, handedness: null, connected: false };
-  ctrl.addEventListener('connected', e => { h.connected = true; h.handedness = e.data.handedness; });
-  ctrl.addEventListener('disconnected', () => { if (h.held) dropFall(h); h.connected = false; });
-  ctrl.addEventListener('selectstart', () => doAction(h, cast(h)));
+  const h = { kind: 'xr', ctrl, grip, hand, holder, line, dot, body, stream, pourT: 0, held: null, bySqueeze: false, handedness: null, connected: false, isHand: false, drag: null, vel: new THREE.Vector3(), lastP: null, poking: null };
+  ctrl.addEventListener('connected', e => { h.connected = true; h.handedness = e.data.handedness; h.isHand = !!e.data.hand; body.visible = !h.isHand; });
+  ctrl.addEventListener('disconnected', () => { if (h.held) dropFall(h); h.connected = false; h.drag = null; });
+  ctrl.addEventListener('selectstart', () => onSelectStart(h));
+  ctrl.addEventListener('selectend', () => onSelectEnd(h));
   ctrl.addEventListener('squeezestart', () => squeeze(h, true));
   ctrl.addEventListener('squeezeend', () => squeeze(h, false));
   xrHands.push(h);
 }
+function handPoint(h, out){
+  if (h.isHand && h.hand.joints) { const a = h.hand.joints['index-finger-tip'], b = h.hand.joints['thumb-tip']; if (a && b) { a.getWorldPosition(out); b.getWorldPosition(tmpV2); return out.add(tmpV2).multiplyScalar(0.5); } }
+  return h.grip.getWorldPosition(out);
+}
+function nearItem(h, r){
+  const p = handPoint(h, V3(0, 0, 0)); let best = null, bd = r;
+  for (const k in items) { const o = items[k].obj; if (!iaOk(o)) continue; o.getWorldPosition(tmpV); const d = tmpV.distanceTo(p); if (d < bd) { bd = d; best = o; } }
+  return best;
+}
+function nearDrag(h, r){
+  const p = handPoint(h, V3(0, 0, 0)); let best = null, bd = r;
+  for (const o of interactives) { const ia = o.userData.ia; if (!ia.drag || !iaOk(o) || (ia.dragOk && !ia.dragOk())) continue; o.getWorldPosition(tmpV); const d = tmpV.distanceTo(p); if (d < bd) { bd = d; best = o; } }
+  return best;
+}
+function startDrag(h, root){
+  const g = root.userData.ia.drag, p = handPoint(h, V3(0, 0, 0));
+  h.drag = { root, p0: p, v0: g.get(), a0: 0 };
+  if (g.kind === 'hinge') { const c = g.center(); h.drag.a0 = Math.atan2(p.z - c.z, p.x - c.x); }
+  tone(400, 0.05, 0, 'triangle', 0.1); pulse(h, 0.3, 40);
+}
+function updateDrags(){
+  for (const h of xrHands) {
+    if (!h.drag) continue;
+    const d = h.drag, g = d.root.userData.ia.drag, p = handPoint(h, tmpV);
+    if (g.kind === 'slide') g.set(clamp(d.v0 + tmpD.copy(p).sub(d.p0).dot(g.dir()), g.min, g.max));
+    else { const c = g.center(); let da = Math.atan2(p.z - c.z, p.x - c.x) - d.a0; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2; g.set(clamp(d.v0 - da, g.min, g.max)); }
+  }
+}
+function openSlide(root){
+  const ia = root.userData.ia, g = ia.drag;
+  if (ia.dragOk && !ia.dragOk()) { if (ia.lockedMsg) { sfx.bad(); notify(ia.lockedMsg); } return; }
+  const v0 = g.get(), tgt = g.open ?? g.max, cl = g.closed ?? g.min, v1 = Math.abs(v0 - tgt) < 0.05 ? cl : tgt;
+  tone(400, 0.05, 0, 'triangle', 0.1); tween(0.6, k => g.set(v0 + (v1 - v0) * ease(k)));
+}
+function pulse(h, intensity = 0.5, ms = 60){
+  try { const s = renderer.xr.getSession(); if (!s) return; for (const src of s.inputSources) if (src.handedness === h.handedness && src.gamepad && src.gamepad.hapticActuators && src.gamepad.hapticActuators[0]) src.gamepad.hapticActuators[0].pulse(intensity, ms); } catch (e) {}
+}
+function teleportTo(h, p){
+  camera.getWorldPosition(head);
+  if (blocked(p.x, p.z)) { sfx.bad(); return false; }
+  if (Math.hypot(p.x - head.x, p.z - head.z) > 7) return false;
+  rig.position.x += p.x - head.x; rig.position.z += p.z - head.z; sweep(300, 700, 0.15, 'sine', 0.08); return true;
+}
+function onSelectStart(h){
+  if (mode === 'play' && !h.held) {
+    if (h.isHand) { const it = nearItem(h, 0.11); if (it) { grab(h, it, true); pulse(h); return; } }
+    const nd = nearDrag(h, h.isHand ? 0.12 : 0.1); if (nd) { startDrag(h, nd); return; }
+  }
+  const r = cast(h);
+  if (mode === 'play' && r && r.root && !h.held) {
+    const ia = r.root.userData.ia;
+    if (ia.drag && (!ia.dragOk || ia.dragOk())) { startDrag(h, r.root); return; }
+    if (ia.grabbable && h.isHand) { grab(h, r.root, true); pulse(h); return; }
+  }
+  if (mode === 'play' && r && !r.root && !h.held && r.hit.face) {
+    const n = r.hit.face.normal.clone().transformDirection(r.hit.object.matrixWorld);
+    if (n.y > 0.7 && r.hit.point.y < 0.1) { teleportTo(h, r.hit.point); return; }
+  }
+  doAction(h, r);
+  if (h.held) pulse(h);
+}
+function onSelectEnd(h){
+  if (h.drag) { h.drag = null; return; }
+  if (h.isHand && h.held && h.bySqueeze) dropFall(h);
+}
+function updatePoke(){
+  for (const h of xrHands) {
+    if (!h.connected || !h.isHand || !h.hand.joints) continue;
+    const tipJ = h.hand.joints['index-finger-tip']; if (!tipJ) continue;
+    tipJ.getWorldPosition(tmpV);
+    let touched = null;
+    for (const o of interactives) {
+      const ia = o.userData.ia; if (!(ia.ui || ia.scaleHover || ia.poke) || !o.isMesh || !iaOk(o)) continue;
+      if (o === wristPause && h.handedness === 'left') continue;
+      const gp = o.geometry.parameters; if (!gp || !gp.width) continue;
+      const p = o.worldToLocal(tmpV2.copy(tmpV));
+      if (Math.abs(p.x) < gp.width / 2 + 0.006 && Math.abs(p.y) < gp.height / 2 + 0.006 && Math.abs(p.z) < (gp.depth || 0) / 2 + 0.018) { touched = o; break; }
+    }
+    if (touched && h.poking !== touched) { h.poking = touched; doAction(h, { root: touched, hit: null }); pulse(h, 0.4, 30); }
+    else if (!touched) h.poking = null;
+  }
+  // randme paus-nupp vasakul käel
+  const L = xrHands.find(h => h.connected && h.isHand && h.handedness === 'left');
+  wristPause.visible = !!L && renderer.xr.isPresenting && (mode === 'play' || mode === 'pause');
+  if (wristPause.visible) { const w = L.hand.joints && L.hand.joints['wrist']; if (w) { w.getWorldPosition(tmpV); w.getWorldQuaternion(tmpQ); wristPause.position.copy(tmpV).add(tmpD.set(0, 0.03, 0.06).applyQuaternion(tmpQ)); wristPause.quaternion.copy(tmpQ); wristPause.rotateX(-Math.PI / 2); } }
+}
+function trackHands(dt){
+  for (const h of xrHands) {
+    if (!h.connected) continue;
+    const p = handPoint(h, V3(0, 0, 0));
+    if (h.lastP) h.vel.lerp(tmpD.copy(p).sub(h.lastP).divideScalar(Math.max(dt, 1e-3)), 0.5);
+    h.lastP = p;
+  }
+}
+/* ---------- viskamine ja füüsika ---------- */
+const flying = [];
+function throwItem(it, p, v){
+  camera.getWorldPosition(head);
+  roomAt(p.z).add(it); it.position.copy(p); it.visible = true; it.userData.ia.flying = true;
+  flying.push({ it, v, t: 0, maxY: p.y, fromZ: head.z });
+  sweep(700, 250, 0.2, 'sine', 0.06);
+}
+function desktopThrow(){
+  if (!mouseHand.held || mode !== 'play') return;
+  const it = mouseHand.held; it.getWorldPosition(tmpV); const p = tmpV.clone();
+  const r = cast(mouseHand); let target;
+  if (r) target = r.hit.point.clone(); else { raycaster.setFromCamera(mouseNDC, camera); target = raycaster.ray.at(4, V3(0, 0, 0)); }
+  const T = clamp(p.distanceTo(target) / 6, 0.35, 1.0);
+  const v = target.sub(p).divideScalar(T); v.y += 0.5 * 9.8 * T;
+  mouseHand.held = null; throwItem(it, p, v);
+}
+function updatePhysics(dt){
+  for (let i = flying.length - 1; i >= 0; i--) {
+    const f = flying[i], it = f.it, ia = it.userData.ia;
+    f.t += dt; f.v.y -= 9.8 * dt;
+    const p0 = it.position.clone(), step = f.v.clone().multiplyScalar(dt), len = step.length();
+    if (ia.item === 'ball') {
+      const nx = p0.x + step.x, ny = p0.y + step.y, nz = p0.z + step.z;
+      if (Math.hypot(nx - BASKET.x, nz - BASKET.z) < BASKET.r - 0.05 && ny < BASKET.top && ny > 0.05 && f.v.y < 0 && p0.y >= BASKET.top - 0.15) { flying.splice(i, 1); ia.flying = false; ballInBasket(it, f); continue; }
+    }
+    let landed = null;
+    if (len > 1e-5) {
+      raycaster.set(p0, tmpD.copy(step).divideScalar(len)); raycaster.far = len + 0.04;
+      const hit = raycaster.intersectObjects(statics.filter(shown), false).find(x => x.face);
+      if (hit) {
+        const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+        if (n.y > 0.5 || f.t > 3) landed = hit.point;
+        else { f.v.sub(n.clone().multiplyScalar(2 * f.v.dot(n))).multiplyScalar(0.45); it.position.copy(hit.point).addScaledVector(n, 0.04); tone(180, 0.05, 0, 'triangle', 0.08); continue; }
+      }
+    }
+    if (!landed && (f.t > 5 || p0.y < -0.5)) { landed = clampRoom(p0.clone()); landed.y = surfaceBelow(landed); }
+    if (landed) { flying.splice(i, 1); ia.flying = false; placeItem(it, landed, rand() * 6.28, f.maxY); sfx.drop(); continue; }
+    it.position.add(step); it.rotation.x += dt * 6; it.rotation.z += dt * 3;
+    f.maxY = Math.max(f.maxY, it.position.y);
+  }
+}
+function ballInBasket(it, f){
+  if (f.fromZ > LINE_Z) {
+    st.balls++; it.userData.ia.scored = true;
+    roomG[6].add(it); it.position.set(BASKET.x + (rand() - 0.5) * 0.12, 0.08 + st.balls * 0.05, BASKET.z + (rand() - 0.5) * 0.12); it.rotation.set(0, 0, 0);
+    basketLamps[st.balls - 1].material.color.set(0x76ff03); sfx.collect(); notify(`Korvis! 🏀 ${st.balls}/3`, 2.5);
+    if (st.balls >= 3) delay(0.6, () => requestDoor(6));
+  } else {
+    notify('Viska joone tagant! 🏀', 3); sfx.bad();
+    roomG[6].add(it); it.position.set(BASKET.x + 0.45, it.userData.ia.restOffset, BASKET.z + 0.3); it.rotation.set(0, 0, 0);
+  }
+}
+
 const allHands = [mouseHand, ...xrHands];
 const mouseNDC = new THREE.Vector2(0, 0);
 
@@ -1647,6 +2230,7 @@ function iaOk(root){
   if (ia.ui) return true;
   if (mode !== 'play') return false;
   if (ia.enabled && !ia.enabled()) return false;
+  if (ia.flying) return false;
   return !isHeld(root);
 }
 const acceptsItem = (ia, item) => typeof ia.accepts === 'function' ? ia.accepts(item) : ia.accepts === item;
@@ -1709,6 +2293,8 @@ function clampRoom(p){ p.x = clamp(p.x, -2.85, 2.85); const R = ROOMS[roomIdx(p.
 function placeItem(it, p, yaw, fromY){
   const ia = it.userData.ia;
   if (ia.fragile && fromY != null && fromY - p.y > 0.45) { breakVase(it, p); return; }
+  if (ia.item === 'seed' && mode === 'play') { pot.getWorldPosition(tmpV2); if (Math.hypot(p.x - tmpV2.x, p.z - tmpV2.z) < 0.35) { roomG[4].add(it); it.visible = false; st.seeded = true; plant.visible = true; plant.scale.setScalar(0.08); sfx.ok(); notify('Seeme on mullas 🌱 Nüüd kasta!', 3); return; } }
+  if (ia.item === 'ball' && Math.hypot(p.x - BASKET.x, p.z - BASKET.z) < 0.4) { notify('Viska joone tagant! 🏀', 3); p = V3(BASKET.x + 0.45, 0, BASKET.z + 0.3); }
   for (const zn of zones) {
     zn.obj.getWorldPosition(tmpV2);
     if (Math.hypot(p.x - tmpV2.x, p.z - tmpV2.z) < zn.r && Math.abs(p.y - (tmpV2.y + zn.top)) < 0.12) {
@@ -1729,6 +2315,7 @@ function dropAt(h, hit){
 function dropFall(h){
   const it = h.held; if (!it) return;
   it.getWorldPosition(tmpV); const fromY = tmpV.y;
+  if (h.kind === 'xr' && mode === 'play' && h.vel && h.vel.length() > 1.3) { h.held = null; throwItem(it, tmpV.clone(), h.vel.clone().multiplyScalar(1.15)); return; }
   if (mode === 'play') for (const o of interactives) {
     const ia = o.userData.ia;
     if (ia.accepts && !ia.noAutoUse && acceptsItem(ia, it.userData.ia.item) && iaOk(o)) { o.getWorldPosition(tmpV2); if (tmpV2.distanceTo(tmpV) < 0.3) { ia.onUse(h); return; } }
@@ -1740,12 +2327,11 @@ function squeeze(h, down){
   if (mode !== 'play') return;
   if (down) {
     if (h.held) return;
-    h.grip.getWorldPosition(tmpV);
-    let best = null, bd = 0.18;
-    for (const k in items) { const o = items[k].obj; if (!iaOk(o)) continue; o.getWorldPosition(tmpV2); const d = tmpV2.distanceTo(tmpV); if (d < bd) { bd = d; best = o; } }
-    if (!best) { const r = cast(h); if (r && r.root && r.root.userData.ia.grabbable) best = r.root; }
-    if (best) grab(h, best, true);
-  } else if (h.held && h.bySqueeze) dropFall(h);
+    const nd = nearDrag(h, 0.1); if (nd) { startDrag(h, nd); return; }
+    let best = nearItem(h, 0.18);
+    if (!best) { const r = cast(h); if (r && r.root) { const ia = r.root.userData.ia; if (ia.drag && (!ia.dragOk || ia.dragOk())) { startDrag(h, r.root); return; } if (ia.grabbable) best = r.root; } }
+    if (best) { grab(h, best, true); pulse(h); }
+  } else { if (h.drag) { h.drag = null; return; } if (h.held && h.bySqueeze) dropFall(h); }
 }
 
 /* ---------- esile tõstmine ---------- */
@@ -1792,17 +2378,23 @@ function updateTools(dt){
   if (!st.recipeRead && heldBy(luupObj) && mode === 'play' && shown(recipeCard.mesh) && lensRay(luupObj, recipeCard.mesh, 2.2)) {
     st.recipeRead = true; drawRecipe(); sfx.reveal(); notify('🔍 Luubiga näed kogused!', 3);
   }
+  if (!st.mirrorRead && heldBy(handMirrorObj) && mode === 'play' && shown(mirrorText.mesh) && lensRay(handMirrorObj, mirrorText.mesh, 3)) {
+    st.mirrorRead = true; drawMirrorText(); sfx.reveal(); notify('🪞 Peeglis on kiri loetav!', 3);
+  }
+  const tor = heldBy(torchObj);
+  if (tor && mode === 'play') { torchObj.getWorldPosition(tmpV); torchObj.getWorldQuaternion(tmpQ); torchSpot.position.copy(tmpV); torchSpot.target.position.copy(tmpV).add(tmpD.set(0, 0, -1).applyQuaternion(tmpQ)); torchSpot.intensity = 30; }
+  else torchSpot.intensity = 0;
   xrHands.forEach(h => {
     h.stream.visible = false;
-    const it = h.held; if (!it || mode !== 'play' || !String(it.userData.ia.item).startsWith('potion')) { h.pourT = 0; return; }
+    const it = h.held, pr = it && it.userData.ia.pour;
+    if (!pr || mode !== 'play') { h.pourT = 0; return; }
     it.getWorldQuaternion(tmpQ); tmpD.set(0, 1, 0).applyQuaternion(tmpQ);
-    if (tmpD.y > -0.2) { h.pourT = 0; return; }
-    const neck = it.localToWorld(V3(0, 0.2, 0));
-    flask.getWorldPosition(tmpV2); tmpV2.y += 0.37;
-    const over = Math.hypot(neck.x - tmpV2.x, neck.z - tmpV2.z) < 0.15 && neck.y > tmpV2.y - 0.03 && neck.y < tmpV2.y + 0.6;
-    const len = over ? Math.max(0.02, neck.y - tmpV2.y + 0.05) : Math.min(0.7, Math.max(0.05, neck.y - 0.05));
-    h.stream.position.copy(neck); h.stream.scale.set(1, len, 1); h.stream.material.color.set(it.userData.ia.color); h.stream.visible = true;
-    if (over) { h.pourT += dt; if (h.pourT > 0.8) { h.pourT = 0; addDose(it.userData.ia.ck); } } else h.pourT = 0;
+    if (tmpD.y > pr.tilt) { h.pourT = 0; return; }
+    const neck = it.localToWorld(pr.neck.clone()), tg = pr.target();
+    const over = !!tg && Math.hypot(neck.x - tg.x, neck.z - tg.z) < pr.r && neck.y > tg.y - 0.03 && neck.y < tg.y + 0.7;
+    const len = over ? Math.max(0.02, neck.y - tg.y + 0.05) : Math.min(0.7, Math.max(0.05, neck.y - 0.05));
+    h.stream.position.copy(neck); h.stream.scale.set(1, len, 1); h.stream.material.color.set(pr.color); h.stream.visible = true;
+    if (over) { h.pourT += dt; if (h.pourT > 0.8) { h.pourT = 0; pr.dose(); pulse(h, 0.3, 40); } } else h.pourT = 0;
   });
 }
 
@@ -1818,7 +2410,8 @@ addEventListener('pointerup', e => {
   if (dragging && dragMoved < 6 && !renderer.xr.isPresenting) {
     setMouse(e); scene.updateMatrixWorld(true);
     const r = cast(mouseHand);
-    if (downBtn === 2) { if (mouseHand.held && mode === 'play') { if (r && !r.root) dropAt(mouseHand, r.hit); else dropFall(mouseHand); } }
+    if (downBtn === 1) desktopThrow();
+    else if (downBtn === 2) { if (mouseHand.held && mode === 'play') { if (r && !r.root) dropAt(mouseHand, r.hit); else dropFall(mouseHand); } }
     else doAction(mouseHand, r);
   }
   dragging = false;
@@ -1830,7 +2423,7 @@ addEventListener('pointermove', e => {
   rig.rotation.y -= dx * 0.004; pitch = clamp(pitch - dy * 0.004, -1.3, 1.3); camera.rotation.x = pitch;
   lastX = e.clientX; lastY = e.clientY;
 });
-addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Escape') togglePause(); });
+addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Escape') togglePause(); if (e.code === 'KeyF') desktopThrow(); });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
@@ -1860,15 +2453,19 @@ function readXR(){
 const BASE_COLLIDERS = [
   [2.08, 3, -0.65, 1.05], [-3, -2.58, -1.55, 0.55], [1.62, 2.58, 2.22, 2.78], [-2.48, -1.92, 1.92, 2.48], [-2.65, -1.65, -2.65, -1.65], [2.3, 2.8, -2.8, -2.3],
   [2.28, 3, -6.7, -3.9], [-3, -2.28, -7.1, -5.5], [1.0, 2.8, -3.3, -3], [-2.8, -1.0, -3.3, -3],
-  [1.8, 2.65, -12.6, -11.8], [-2.72, -2.28, -10.12, -9.68], [-2.78, -1.92, -12.55, -11.65], [1.98, 2.62, -10.17, -9.53], [-2.88, -1.52, -14.62, -13.78], [1.93, 2.57, -14.72, -14.18]
+  [1.8, 2.65, -12.6, -11.8], [-2.72, -2.28, -10.12, -9.68], [-2.78, -1.92, -12.55, -11.65], [1.98, 2.62, -10.17, -9.53], [-2.88, -1.52, -14.62, -13.78], [1.93, 2.57, -14.72, -14.18],
+  [1.3, 1.9, -16.0, -15.4], [2.0, 2.6, -16.2, -15.6], [-2.6, -2.0, -20.6, -20.0], [-1.9, -1.3, -20.8, -20.2], [2.48, 3, -19.3, -16.7],
+  [-3, -2.28, -24.45, -22.55], [0.85, 1.55, -25.15, -24.45], [2.0, 2.8, -22.8, -22.0], [2.4, 3, -26.6, -23.3],
+  [2.1, 3, -30.65, -29.35], [-2.6, -1.6, -32.1, -31.1], [-3, -2.65, -29.5, -28.3],
+  [2.7, 3, -35.9, -34.4], [1.75, 2.65, -38.6, -38.0], [-1.78, -1.22, -38.48, -37.92]
 ];
 let COLLIDERS = BASE_COLLIDERS.slice();
 function rebuildColliders(){ COLLIDERS = BASE_COLLIDERS.slice(); mirrors.forEach(m => { const x = m.g.position.x, z = m.g.position.z; COLLIDERS.push([x - 0.2, x + 0.2, z - 0.2, z + 0.2]); }); }
 function blocked(x, z){
   const r = 0.22;
   let ok = false;
-  for (const R of ROOMS) if (x > -3 + r && x < 3 - r && z > R.z0 + r && z < R.z1 - r) ok = true;
-  DOORS.forEach((d, i) => { if (st.door && st.door[i] && Math.abs(x) < 0.33 && Math.abs(z - d.z) < 0.6) ok = true; });
+  for (const R of ROOMS.slice(0, settings.rooms)) if (x > -3 + r && x < 3 - r && z > R.z0 + r && z < R.z1 - r) ok = true;
+  DOORS.forEach((d, i) => { if (st.door && st.door[i] && i < settings.rooms - 1 && Math.abs(x) < 0.33 && Math.abs(z - d.z) < 0.6) ok = true; });
   if (!ok) return true;
   for (const c of COLLIDERS) if (x > c[0] - r && x < c[1] + r && z > c[2] - r && z < c[3] + r) return true;
   return false;
@@ -1900,14 +2497,15 @@ function aimMouseHolder(){
   mouseHolder.quaternion.setFromUnitVectors(NEG_Z, tmpD);
 }
 function updateRoomVis(){
-  const r = roomIdx(camZ());
-  const vis = [false, false, false]; vis[r] = true;
-  for (let i = r; i < 2 && st.door[i]; i++) vis[i + 1] = true;
+  const n = settings.rooms, r = Math.min(roomIdx(camZ()), n - 1);
+  const vis = ROOMS.map(() => false); vis[r] = true;
+  for (let i = r; i < n - 1 && st.door[i]; i++) vis[i + 1] = true;
   for (let i = r - 1; i >= 0 && st.door[i]; i--) vis[i] = true;
   roomG.forEach((g, i) => g.visible = vis[i]);
-  if (mode === 'play' && !st.visited[r]) { st.visited[r] = true; delay(0.4, () => openReader(r === 1 ? '🧪 Labor' : '🔭 Tähetorn', r === 1 ? LAB_TEXT : OBS_TEXT)); }
+  setRoomLight(ceilLight, r); setRoomLight(labLight, vis[r + 1] ? r + 1 : vis[r - 1] ? r - 1 : -1);
+  if (mode === 'play' && !st.visited[r] && ROOM_TEXTS[r]) { st.visited[r] = true; delay(0.4, () => openReader(ROOM_TEXTS[r][0], ROOM_TEXTS[r][1])); }
+  return r;
 }
-
 /* ---------- taustamuusika ---------- */
 let musicT = 1;
 const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33];
@@ -1959,11 +2557,14 @@ renderer.setAnimationLoop(() => {
     }
   }
   updateTweens(dt);
-  updateRoomVis();
+  trackHands(dt); updateDrags(); updatePhysics(dt);
+  const curRoom = updateRoomVis();
+  const hTgt = curRoom === 3 ? 0.12 : 1.1 + 1.1 * lightV; hemi.intensity += (hTgt - hemi.intensity) * Math.min(1, dt * 6); moon.intensity = curRoom === 3 ? 0 : 0.7;
   if (roomG[1].visible) updateScale(dt);
   if (!renderer.xr.isPresenting) aimMouseHolder();
   updateTools(dt);
   updateHands();
+  updatePoke();
   updateMusic(dt);
   mobile.rotation.y += dt * 0.15;
   for (const g of gears) if (g.visible) { g.userData.m.rotation.y += dt * 1.5; g.userData.m.position.y = 0.045 + Math.sin(t * 2) * 0.01; }
