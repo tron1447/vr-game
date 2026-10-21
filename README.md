@@ -1,4 +1,5 @@
-[Uploading index (10).html…]()<!doctype html>
+[index (11).html](https://github.com/user-attachments/files/33783098/index.11.html)
+<!doctype html>
 <html lang="et">
 <head>
 <meta charset="utf-8">
@@ -1200,6 +1201,7 @@ scene.fog = new THREE.FogExp2(0x0b5470, 0);
   for (let i = 0; i < 30; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.02 + Math.random() * 0.03, 8, 6), bubM); b.position.set((Math.random() - 0.5) * 9, Math.random() * 7, -33.5 - Math.random() * 11); waterG.add(b); waterG.userData.bubbles.push(b); }
 }
 // pärlid ja aardekirst
+const PEARL_SPOTS = [[-3.4, 0.35, -36.2], [3.8, 5.35, -38.2], [-1.8, 3.4, -42.4], [-3.8, 6.2, -42.8], [4.2, 0.35, -34.5], [0.6, 0.35, -40.5], [-3.6, 4.6, -35]];
 const PEARLS = [[-3.4, 0.35, -36.2], [3.8, 5.35, -38.2], [-1.8, 3.4, -42.4]].map(([x, y, z], i) => {
   const g = new THREE.Group(); g.position.set(x, y, z); waterG.add(g);
   const shell = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.4, 1).rotateX(Math.PI), new THREE.MeshLambertMaterial({ color: 0xf8bbd0, emissive: 0x4a2030, side: THREE.DoubleSide })); shell.position.y = -0.02; g.add(shell);
@@ -1227,6 +1229,7 @@ function collectPearl(i){
   else notify(`🦪 Pärl ${st.pearls}/3`, 2.5);
 }
 function resetWater(){
+  shuffle(PEARL_SPOTS.slice()).slice(0, 3).forEach((p, i) => PEARLS[i].position.set(p[0], p[1], p[2]));
   st.pearls = 0; waterVel.set(0, 0, 0); tChest.userData.lid.rotation.x = 0;
   PEARLS.forEach(g => g.userData.pearl.forEach(o => o.visible = true));
   for (let i = 0; i < 3; i++) tChest.userData['slot' + i].material.color.set(0x333333);
@@ -1312,17 +1315,23 @@ const PLATS = [[0, -46.6, 3, 3, 0], [0, -50.6, 2, 2, 0.5], [-2.4, -54.2, 2, 2, 1
 });
 // laserid: funktsioon annab otspunktid
 const LASERS = [
-  t => { const p = PLATS[1], y = p.top + 1.0 + Math.sin(t * 1.1) * 0.7; return [V3(p.x - 1.3, y, p.z), V3(p.x + 1.3, y, p.z)]; },
-  t => { const p = PLATS[3], x = p.x + Math.sin(t * 1.3) * 1.15; return [V3(x, p.top, p.z), V3(x, p.top + 2.4, p.z)]; },
-  t => { const p = PLATS[5], a = t * 0.9; return [V3(p.x + Math.cos(a) * 1.5, p.top + 0.35, p.z + Math.sin(a) * 1.5), V3(p.x - Math.cos(a) * 1.5, p.top + 0.35, p.z - Math.sin(a) * 1.5)]; },
-  t => { const p = PLATS[7]; return [V3(p.x - 1.9, p.top + 0.4, p.z + 0.9), V3(p.x + 1.9, p.top + 0.4, p.z + 0.9)]; },
-  t => { const p = PLATS[7], x = p.x + Math.sin(t * 0.8) * 1.5; return [V3(x, p.top, p.z - 0.2), V3(x, p.top + 2.4, p.z - 0.2)]; }
+  (t, k) => { const p = PLATS[1], y = p.top + 1.0 + Math.sin(t * 1.1 * k.s + k.ph) * 0.7; return [V3(p.x - 1.3, y, p.z), V3(p.x + 1.3, y, p.z)]; },
+  (t, k) => { const p = PLATS[3], x = p.x + Math.sin(t * 1.3 * k.s + k.ph) * 1.15; return [V3(x, p.top, p.z), V3(x, p.top + 2.4, p.z)]; },
+  (t, k) => { const p = PLATS[5], a = t * 0.9 * k.s * k.dir + k.ph; return [V3(p.x + Math.cos(a) * 1.5, p.top + 0.35, p.z + Math.sin(a) * 1.5), V3(p.x - Math.cos(a) * 1.5, p.top + 0.35, p.z - Math.sin(a) * 1.5)]; },
+  (t, k) => { const p = PLATS[7]; return [V3(p.x - 1.9, p.top + 0.4, p.z + 0.9), V3(p.x + 1.9, p.top + 0.4, p.z + 0.9)]; },
+  (t, k) => { const p = PLATS[7], x = p.x + Math.sin(t * 0.8 * k.s + k.ph) * 1.5; return [V3(x, p.top, p.z - 0.2), V3(x, p.top + 2.4, p.z - 0.2)]; },
+  // KÜKITA: paigal laser pea kõrgusel
+  (t, k) => { const p = PLATS[3]; return [V3(p.x - 1.4, p.top + 1.15, p.z - 0.5), V3(p.x + 1.4, p.top + 1.15, p.z - 0.5)]; },
+  (t, k) => { const p = PLATS[0]; return [V3(p.x - 1.6, p.top + 1.2, p.z - 1.0), V3(p.x + 1.6, p.top + 1.2, p.z - 1.0)]; },
+  (t, k) => { const p = PLATS[6]; return [V3(p.x - 1.1, p.top + 1.15, p.z), V3(p.x + 1.1, p.top + 1.15, p.z)]; },
+  // laskuv-tõusev sein, mille alt tuleb läbi pugeda
+  (t, k) => { const p = PLATS[5], y = p.top + 0.9 + Math.sin(t * 0.7 * k.s + k.ph) * 0.5; return [V3(p.x - 1.4, y, p.z + 0.9), V3(p.x + 1.4, y, p.z + 0.9)]; }
 ].map(fn => {
   const core = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1, 6), new THREE.MeshBasicMaterial({ color: 0xff3030, fog: false }));
   const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 8), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   const em = [0, 1].map(() => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), new THREE.MeshLambertMaterial({ color: 0x333333, emissive: 0x550000, fog: false })); spaceG.add(b); return b; });
   spaceG.add(core); spaceG.add(glow);
-  return { fn, core, glow, em, a: V3(0, 0, 0), b: V3(0, 0, 0) };
+  return { fn, core, glow, em, a: V3(0, 0, 0), b: V3(0, 0, 0), on: true, k: { s: 1, ph: 0, dir: 1 } };
 });
 const starGlowTex = canvasTex(128, 128, (c, W, H) => { const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2); g.addColorStop(0, 'rgba(255,240,150,0.9)'); g.addColorStop(1, 'rgba(255,200,50,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); });
 const SPACE_STARS = [2, 4, 6].map((pi, i) => {
@@ -1350,6 +1359,11 @@ function enterPortal(){
   win();
 }
 function resetSpace(){
+  const pick = new Set([3, 4]); // lõpu laserid alati
+  shuffle([0, 1, 2, 5, 6, 7, 8]).slice(0, 3 + (settings.diff === 'raske' ? 2 : settings.diff === 'kerge' ? 0 : 1)).forEach(i => pick.add(i));
+  LASERS.forEach((L, i) => { L.on = pick.has(i); L.k = { s: 0.75 + rand() * 0.6, ph: rand() * 6.28, dir: rand() < 0.5 ? 1 : -1 }; });
+  shuffle([1, 2, 3, 4, 5, 6]).slice(0, 3).sort((a, b) => a - b).forEach((pi, i) => { const p = PLATS[pi]; SPACE_STARS[i].userData.base = p.top + 1.2 + rand() * 0.5; SPACE_STARS[i].position.set(p.x + (rand() - 0.5) * 0.8, SPACE_STARS[i].userData.base, p.z + (rand() - 0.5) * 0.6); });
+  st.zaps = 0;
   st.stars = 0; sp.vy = 0; sp.ground = null; sp.cp = PLATS[0]; sp.inv = 0;
   SPACE_STARS.forEach(g => g.visible = true); portalRing.material.color.set(0x555555); portalDisc.visible = false;
 }
@@ -1365,7 +1379,9 @@ function updateSpace(dt, t){
   SPACE_STARS.forEach((g, i) => { g.rotation.y = t * 1.5; g.position.y = g.userData.base + Math.sin(t * 1.3 + i) * 0.15; });
   portalDisc.rotation.z = -t * 1.2; portalRing.rotation.z = t * 0.3;
   for (const L of LASERS) {
-    const [a, b] = L.fn(t); L.a.copy(a); L.b.copy(b);
+    L.core.visible = L.glow.visible = L.em[0].visible = L.em[1].visible = L.on;
+    if (!L.on) { L.a.set(0, -99, 0); L.b.set(0, -99, 0); continue; }
+    const [a, b] = L.fn(t, L.k); L.a.copy(a); L.b.copy(b);
     const mid = tmpV.copy(a).add(b).multiplyScalar(0.5), len = a.distanceTo(b);
     for (const m of [L.core, L.glow]) { m.position.copy(mid); m.quaternion.setFromUnitVectors(UP, tmpD.copy(b).sub(a).normalize()); m.scale.set(1, len, 1); }
     L.em[0].position.copy(a); L.em[1].position.copy(b);
@@ -1406,7 +1422,7 @@ function updateSpace(dt, t){
     camera.getWorldPosition(head);
     const pts = []; for (let k = 0; k <= 4; k++) pts.push([V3(head.x, rig.position.y + 0.15 + (head.y - 0.1 - rig.position.y - 0.15) * k / 4, head.z), 0.13]);
     for (const h of xrHands) if (h.connected) pts.push([handPoint(h, V3(0, 0, 0)), 0.06]);
-    if (LASERS.some(L => pts.some(([p, r]) => segDist(p, L.a, L.b) < r))) { notify('⚡ Laser! Tagasi kontrollpunkti', 2.5); sfx.bad(); tone(120, 0.3, 0, 'sawtooth', 0.12); for (const h of xrHands) pulse(h, 1, 200); respawn(); return; }
+    if (LASERS.some(L => pts.some(([p, r]) => segDist(p, L.a, L.b) < r))) { notify('⚡ Laser! Tagasi kontrollpunkti', 2.5); st.zaps++; sfx.bad(); tone(120, 0.3, 0, 'sawtooth', 0.12); for (const h of xrHands) pulse(h, 1, 200); respawn(); return; }
   }
   const touch = [head.clone()]; for (const h of xrHands) if (h.connected) touch.push(handPoint(h, V3(0, 0, 0)));
   SPACE_STARS.forEach((g, i) => { if (!g.visible) return; g.getWorldPosition(tmpV2); if (touch.some(p => p.distanceTo(tmpV2) < 0.4)) collectStar(i); });
@@ -1429,6 +1445,72 @@ const GEAR_SPOTS = [
 ];
 const gearGeo = (() => { const parts = [new THREE.CylinderGeometry(0.032, 0.032, 0.012, 20).rotateX(Math.PI / 2)]; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; parts.push(new THREE.BoxGeometry(0.014, 0.014, 0.012).translate(Math.cos(a) * 0.036, Math.sin(a) * 0.036, 0)); } return mergeGeometries(parts.map(p => p.index ? p.toNonIndexed() : p)); })();
 const gears = [0, 1, 2].map(() => { const g = new THREE.Group(); const m = D(gearGeo, M.gold, 0, 0.045, 0, g); g.userData.m = m; makeIA(g, { onClick: () => collectGear(g) }); return g; });
+
+
+/* =========================================================
+   SALAMÜNDID (1 igas toas, igas mängus uues kohas) + SAAVUTUSED
+   ========================================================= */
+const COIN_SPOTS_EXTRA = [[-4.2, 0, -40], [0.5, 6.0, -36.5], [4.3, 0, -44], [-4.4, 3.0, -37.5]];
+const coinMat = new THREE.MeshLambertMaterial({ color: 0xffc107, emissive: 0x6d4c00 });
+const coins = Array.from({ length: NR }, (_, i) => {
+  const g = new THREE.Group(); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.01, 24).rotateX(Math.PI / 2), coinMat); m.position.y = 0.06; g.add(m);
+  const star = new THREE.Mesh(new THREE.CircleGeometry(0.022, 5), new THREE.MeshBasicMaterial({ color: 0xfff59d })); star.position.set(0, 0.06, 0.006); g.add(star);
+  g.userData.m = m; makeIA(g, { onClick: () => collectCoin(i), enabled: () => g.visible }); return g;
+});
+function placeCoins(){
+  const used = new Set(P.gearSpots.map(s => s.join()));
+  coins.forEach((c, i) => {
+    c.visible = false; if (i >= settings.rooms) return;
+    let pool;
+    if (i < 6) pool = GEAR_SPOTS.filter(s => roomIdx(s[2]) === i && !used.has(s.join()));
+    else if (i === 6) pool = COIN_SPOTS_EXTRA;
+    else pool = PLATS.slice(1, 7).map(p => [p.x + (rand() - 0.5) * (p.w - 0.4), p.top, p.z + (rand() - 0.5) * (p.d - 0.4)]);
+    if (!pool.length) return;
+    const s = pick(pool); roomG[i].add(c); c.position.set(s[0], s[1], s[2]); c.visible = true;
+  });
+  st.coins = 0;
+}
+function collectCoin(i){
+  const c = coins[i]; if (!c.visible || mode !== 'play') return;
+  c.visible = false; st.coins++; sweep(900, 1800, 0.2, 'square', 0.05); tone(1320, 0.15, 0.1, 'square', 0.05);
+  notify(`🪙 Salamünt! ${st.coins}/${coins.filter((_, j) => j < settings.rooms).length}`, 2.5);
+}
+function updateCoins(t){
+  if (mode !== 'play') return;
+  const pts = []; camera.getWorldPosition(head); pts.push(head.clone()); for (const h of xrHands) if (h.connected) pts.push(handPoint(h, V3(0, 0, 0)));
+  coins.forEach((c, i) => { if (!c.visible) return; c.userData.m.rotation.y = t * 2; c.getWorldPosition(tmpV2); tmpV2.y += 0.06; if (pts.some((p, k) => p.distanceTo(tmpV2) < (k ? 0.13 : 0.3))) collectCoin(i); });
+}
+const ACH = [
+  ['first', '🚪 Esimene põgenemine', 'Läbi mäng ükskõik mis seadetega'],
+  ['nohint', '🧠 Ilma abita', 'Läbi mäng ilma ühegi vihjeta'],
+  ['fast', '⚡ Välkkiire', 'Läbi mäng alla 10 minuti'],
+  ['hard', '😈 Raske pähkel', 'Läbi mäng raskel tasemel'],
+  ['all8', '🏠 Terve maja', 'Läbi kõik 8 tuba'],
+  ['coins', '🪙 Aardekütt', 'Leia ühes mängus kõik salamündid'],
+  ['gears', '⚙️ Mehaanik', 'Leia ühes mängus kõik 3 kuldset hammasratast'],
+  ['laser', '🕺 Laseritantsija', 'Läbi kosmos ilma ühtegi laserit puudutamata'],
+  ['learn', '📚 Tarkpea', 'Läbi mäng õppimise režiimiga'],
+  ['coins20', '💰 Rikas', 'Kogu kokku 20 salamünti (kõik mängud)']
+];
+const achGot = store('pt_ach') || {};
+function unlockAch(id){ if (achGot[id]) return; achGot[id] = Date.now(); store('pt_ach', achGot); const a = ACH.find(x => x[0] === id); delay(1.2 + Object.keys(achGot).length * 0.01, () => { notify(`🏅 Uus saavutus: ${a[1]}!`, 4); sfx.win ? tone(880, 0.3, 0, 'triangle', 0.08) : 0; }); }
+function checkAch(){
+  unlockAch('first');
+  if (st.hints === 0) unlockAch('nohint');
+  if (elapsed < 600) unlockAch('fast');
+  if (settings.diff === 'raske') unlockAch('hard');
+  if (settings.rooms >= 8) unlockAch('all8');
+  if (st.coins >= coins.filter((_, j) => j < settings.rooms).length) unlockAch('coins');
+  if (st.gears >= 3) unlockAch('gears');
+  if (settings.rooms >= 8 && st.zaps === 0) unlockAch('laser');
+  if (settings.learn !== 'off') unlockAch('learn');
+  const tot = (store('pt_coins') || 0) + st.coins; store('pt_coins', tot); if (tot >= 20) unlockAch('coins20');
+}
+function showAch(){
+  if (mode === 'menu') menuUI.visible = false;
+  const n = ACH.filter(a => achGot[a[0]]).length;
+  openReader(`🏅 Saavutused ${n}/${ACH.length}`, ACH.map(a => `${achGot[a[0]] ? '✅' : '🔒'} ${a[1]} – ${a[2]}`).join('\n') + `\n\n🪙 Münte kokku: ${store('pt_coins') || 0}`, false);
+}
 
 /* =========================================================
    VÕETAVAD ESEMED
@@ -1688,7 +1770,7 @@ function openReader(title, text, paper = true){
   placeInFront(readerUI, 0.9, -0.08); readerUI.visible = true;
 }
 function openView(drawFn){ readerPanel.draw(drawFn); placeInFront(readerUI, 0.9, -0.08); readerUI.visible = true; }
-function closeReader(){ readerUI.visible = false; }
+function closeReader(){ readerUI.visible = false; if (mode === 'menu' && !menuUI.visible) menuUI.visible = true; }
 
 /* ---------- seaded + peamenüü ---------- */
 const DIFF = {
@@ -1711,7 +1793,7 @@ function drawMenu(){
   menuPanel.draw((c, W, H) => {
     panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.065}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.62));
-    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Professor Nupu maja • kuni 8 tuba (7. vesi 🌊, 8. kosmos 🚀) • pultidega või paljaste kätega', W / 2, H * mY(0.545));
+    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Iga mäng on erinev • 🪙 salamündid • 🏅 saavutused • pultidega või paljaste kätega', W / 2, H * mY(0.545));
     c.fillStyle = '#fff'; c.textAlign = 'left'; c.font = `bold ${H * 0.033}px ${FONT}`;
     c.fillText('Raskusaste', W * 0.03, H * mY(ROW.diff)); c.fillText('Taimer', W * 0.03, H * mY(ROW.timer)); c.fillText('Tubade arv', W * 0.03, H * mY(ROW.rooms)); c.fillText('Õppimine', W * 0.03, H * mY(ROW.learn)); c.fillText('Muusika', W * 0.03, H * mY(ROW.music));
     c.textAlign = 'center'; c.fillStyle = '#b0bec5'; c.font = `${H * 0.028}px ${FONT}`;
@@ -1741,6 +1823,7 @@ for (let n = 1; n <= 8; n++) addOpt('rooms', n, n === 7 ? '7🌊' : n === 8 ? '8
 LEARN.forEach(([v, l], i) => addOpt('learn', v, l, -0.36 + i * 0.235, ROW.learn, 0.22));
 { const b = makeButton('🎵 Sees', 0.33, 0.085, () => { settings.music = !settings.music; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.25, ROW.music, 0.01); menuUI.add(b); optBtns.music.push(b); }
 { const b = makeButton('▶ Alusta', 0.55, 0.13, () => newGame(), { color: '#e65100', fs: 0.45 }); b.position.set(0, -0.33, 0.01); menuUI.add(b); }
+{ const b = makeButton('🏅 Saavutused', 0.4, 0.1, () => showAch(), { color: '#6a1b9a', fs: 0.42 }); b.position.set(-0.55, -0.33, 0.01); menuUI.add(b); }
 paintOpts();
 const pauseUI = new THREE.Group(); pauseUI.visible = false; scene.add(pauseUI);
 const pausePanel = new CanvasPlane(0.9, 0.36, 700, true); pausePanel.mesh.position.y = 0.4; pauseUI.add(pausePanel.mesh); makeIA(pausePanel.mesh, { ui: true, noHover: true });
@@ -1778,7 +1861,7 @@ const ROOM_TEXTS = [null, ['🧪 Labor', LAB_TEXT], ['🔭 Tähetorn', OBS_TEXT]
   ['🌱 Kasvuhoone', 'Tere tulemast kasvuhoonesse! 🌱\n\nVõti kasvab siin lille sees. Leia seemned, istuta need suurde potti ja kasta taime.\n\n– Professor Nupp'],
   ['📻 Raadiotuba', 'Raadiotuba 📻\n\nMinu salajane raadiojaam saadab koodi morsetähestikus. Jaama sageduse kirjutasin peegelkirjas seinale – riiulil on käsipeegel.\n\n– Professor Nupp'],
   ['🌊 Veealune koobas', 'Veealune koobas! 🌊\n\nUJU KÄTEGA: lükka kätega taha – liigud ette (nagu rinnuliujumine). Või näpista vett ja tõmba end edasi. Pultidega: juhtkang ujub sinna, kuhu vaatad, või hoia külgnuppu ja ujuta pultidega.\n\nLeia 3 pärlit 🦪 (puuduta neid) – siis avaneb aardekirst ja uks kosmosesse.\n\n– Professor Nupp'],
-  ['🚀 Kosmos', 'Kosmos! 🚀 Siin on raskusjõud väike – saad kõrgele hüpata!\n\nHÜPPA: hüppa päriselt, või viska mõlemad käed järsult üles. Pultidega: A/X nupp. Arvutis: tühik.\n\nHüppa platvormilt platvormile ja ÄRA PUUDUTA PUNASEID LASEREID ⚡ – muidu lähed tagasi. Korja 3 tähte ⭐ ja mine portaali 🌀\n\n– Professor Nupp']];
+  ['🚀 Kosmos', 'Kosmos! 🚀 Siin on raskusjõud väike – saad kõrgele hüpata!\n\nHÜPPA: hüppa päriselt, või viska mõlemad käed järsult üles. Pultidega: A/X nupp. Arvutis: tühik.\n\nHüppa platvormilt platvormile ja ÄRA PUUDUTA PUNASEID LASEREID ⚡ – muidu lähed tagasi. Pea kõrgusel olevate laserite alt KÜKITA läbi (päriselt!). Laserid on igas mängus erinevad. Korja 3 tähte ⭐ ja mine portaali 🌀\n\n– Professor Nupp']];
 
 let P = {}, st = {}, mode = 'menu', elapsed = 0, entry = '', kpMsg = null;
 function setupPuzzle(){
@@ -1854,6 +1937,7 @@ function applyPuzzle(){
   xyDrawer.position.z = 0;
   safeDoor.rotation.y = 0; safeWheels.forEach((w, i) => drawWheel(i));
   goldInLock.visible = false;
+  placeCoins();
   gears.forEach((g, i) => { const s = P.gearSpots[i]; roomAt(s[2]).add(g); g.position.set(s[0], s[1], s[2]); g.visible = true; });
   flaskInfo.mesh.visible = settings.diff !== 'raske';
   // toad 4–7
@@ -2173,7 +2257,7 @@ function currentHint(){
     return 'Raadio piiksub morset. Tõlgi numbrid seinal oleva morsetabeli abil ja sisesta need ukse kõrval olevale lukule.';
   }
   if (cur === 6) return st.pearls < 3 ? `Uju koopas ringi: lükka kätega taha või näpista vett ja tõmba. Pärleid 🦪 on kolm: üks põhjas, üks kõrgel kaljusambal, üks vetikate vahel (${st.pearls}/3).` : 'Kirst on lahti – uju uksest kosmosesse!';
-  if (cur === 7) return st.stars < 3 ? `Hüppa platvormidel (päris hüpe, käed järsult üles, A/X või tühik). Väldi lasereid ⚡ – oota, kuni laser on eemal. Tähti ${st.stars}/3.` : 'Kõik tähed käes! Mine portaali 🌀';
+  if (cur === 7) return st.stars < 3 ? `Hüppa platvormidel (päris hüpe, käed järsult üles, A/X või tühik). Väldi lasereid ⚡ – oota, kuni laser on eemal. Kõrge laseri all KÜKITA päriselt! Tähti ${st.stars}/3.` : 'Kõik tähed käes! Mine portaali 🌀';
   if (false) return st.stars < 3 ? `Uju kosmoses: lükka kätega taha või näpista õhku ja tõmba. Pultidega juhtkang. Puuduta helendavaid tähti ⭐ (${st.stars}/3).` : 'Kõik tähed käes! Uju sinisesse portaali 🌀';
   return 'Uju kosmoses tähtede juurde ⭐';
 }
@@ -2217,7 +2301,7 @@ function exitVR(){ const s = renderer.xr.getSession(); if (s) s.end(); }
 function camZ(){ camera.getWorldPosition(head); return head.z; }
 function timerLeft(){ return settings.timer > 0 && !st.timerOff ? settings.timer * 60 - elapsed : null; }
 function win(){
-  mode = 'win'; sfx.win(); closeReader();
+  mode = 'win'; sfx.win(); closeReader(); checkAch();
   const stars = st.hints === 0 ? 3 : st.hints <= 3 ? 2 : 1;
   const b = best[bestKey()]; let rec = false;
   if (!b || elapsed < b.t) { best[bestKey()] = { t: elapsed, s: stars }; store('pt_best', best); rec = true; }
@@ -2782,7 +2866,7 @@ renderer.setAnimationLoop(() => {
   updateTweens(dt);
   trackHands(dt); updateDrags();
   const curRoom = updateRoomVis();
-  updateWater(dt, t); updateSpace(dt, t);
+  updateWater(dt, t); updateSpace(dt, t); updateCoins(t);
   const hTgt = curRoom === 3 ? 0.12 : 1.1 + 1.1 * lightV; hemi.intensity += (hTgt - hemi.intensity) * Math.min(1, dt * 6); moon.intensity = curRoom === 3 ? 0 : 0.7;
   if (roomG[1].visible) updateScale(dt);
   if (!renderer.xr.isPresenting) aimMouseHolder();
@@ -2800,4 +2884,3 @@ renderer.setAnimationLoop(() => {
 </script>
 </body>
 </html>
-
