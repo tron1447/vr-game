@@ -1,5 +1,4 @@
-[Uploading index (9).html…]()
-<!doctype html>
+[Uploading index (10).html…]()<!doctype html>
 <html lang="et">
 <head>
 <meta charset="utf-8">
@@ -22,7 +21,7 @@
   <b>🔐 Põgenemistuba VR – Professor Nupu maja</b><br>
   Questis: vajuta all <b>ENTER VR</b>.<br>
   Arvutis: <b>klõps</b> = kasuta / võta ese, <b>parem klõps</b> = pane ese maha,
-  <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>F</b> = viska, <b>Esc</b> = paus.<br>
+  <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>Esc</b> = paus.<br>
   <button id="tqBtn" style="margin-top:6px">📚 Õpetaja küsimused</button>
   <div id="tqBox" style="display:none;margin-top:6px">
     Üks küsimus rea kohta: <code>küsimus | õige vastus | vale | vale | vale</code><br>
@@ -355,7 +354,7 @@ function coloredMerge(parts){
    REGISTER: toad, staatilised ja klõpsatavad objektid
    ========================================================= */
 const NR = 8;
-const ROOMS = Array.from({ length: NR }, (_, i) => ({ z0: 3 - 6 * (i + 1), z1: 3 - 6 * i }));
+const ROOMS = Array.from({ length: 6 }, (_, i) => ({ z0: 3 - 6 * (i + 1), z1: 3 - 6 * i })).concat([{ z0: -45, z1: -33 }, { z0: -80, z1: -45 }]);
 const roomG = ROOMS.map(() => { const g = new THREE.Group(); scene.add(g); return g; });
 let CUR = roomG[0];
 const statics = [];
@@ -374,7 +373,7 @@ function makeIA(root, ia){
   return root;
 }
 function shown(o){ let last = null; while (o) { if (!o.visible) return false; last = o; o = o.parent; } return last === scene; }
-const roomIdx = z => clamp(Math.floor((3 - z) / 6), 0, NR - 1);
+const roomIdx = z => { for (let i = 0; i < NR; i++) if (z > ROOMS[i].z0) return i; return NR - 1; };
 const roomAt = z => roomG[roomIdx(z)];
 
 /* ---------- animatsioonid ---------- */
@@ -430,7 +429,6 @@ Object.assign(M, {
 shell(3, { floor: M.stoneFloor, floorTile: 2, ceil: M.darkCeil, ceilTile: 6, wall: M.stone, wallTile: 1.5, band: M.stone, bandH: 0.4, bandTx: 1, bandTy: 1, trim: M.darkMetal, southDoor: 0, northDoor: 0 });
 shell(4, { floor: M.terra, floorTile: 1.2, ceil: M.greenCeil, ceilTile: 6, wall: M.glassWall, wallTile: 1.5, band: M.woodDark, bandH: 0.7, bandTx: 0.6, bandTy: 0.6, trim: M.labCab, southDoor: 0, northDoor: 0 });
 shell(5, { floor: M.carpet, floorTile: 1, ceil: M.retroCeil, ceilTile: 6, wall: M.retro, wallTile: 1, band: M.woodDark, bandH: 0.9, bandTx: 0.6, bandTy: 0.6, trim: M.trim, southDoor: 0, northDoor: 0 });
-shell(6, { floor: M.gym, floorTile: 1.5, ceil: M.playCeil, ceilTile: 6, wall: M.play, wallTile: 1.5, band: M.labCab, bandH: 1.0, bandTx: 1, bandTy: 1, trim: M.labCab, southDoor: 0, northDoor: 0 });
 
 /* ---------- uksed ---------- */
 const DOORS = [];
@@ -451,8 +449,7 @@ makeDoor(-15, exitDoorTex, h => {
 });
 makeDoor(-21, doorTexture('#3a3d40', 'rgba(255,255,255,0.05)', '🌱 KASVUHOONE', '#9ccc65'), () => { if (!st.door[3]) { sfx.bad(); notify('Uks on surve all lukus – keera ventiilid õigeks ⚙️'); } });
 makeDoor(-27, doorTexture('#e8f5e9', 'rgba(0,60,0,0.08)', '📻 RAADIOTUBA', '#2e7d32'), h => { if (st.door[4]) return; if (h && h.held && h.held.userData.ia.item === 'greenkey') { consume(h); sfx.unlock(); requestDoor(4); return; } sfx.bad(); notify('Uks on lukus – vaja on rohelist võtit 🗝️'); });
-makeDoor(-33, doorTexture('#8d5a3a', 'rgba(0,0,0,0.15)', '🎈 MÄNGUTUBA', '#ffe0b2'), () => { if (!st.door[5]) { sfx.bad(); notify('Uks avaneb raadiokoodiga – lukk on ukse kõrval 📻'); } });
-makeDoor(-39, doorTexture('#4a7fd0', 'rgba(255,255,255,0.12)', '🚪 VÄLJAPÄÄS', '#ffeb3b'), () => { if (!st.door[6]) { sfx.bad(); notify('Viska 3 palli korvi – siis uks avaneb 🏀'); } });
+makeDoor(-33, doorTexture('#1a237e', 'rgba(255,255,255,0.1)', '🚀 KOSMOS', '#ffd54f'), () => { if (!st.door[5]) { sfx.bad(); notify('Uks avaneb raadiokoodiga – lukk on ukse kõrval 📻'); } });
 function openDoor(i, cb){
   if (st.door[i]) return;
   st.door[i] = true; sfx.creak();
@@ -1157,60 +1154,126 @@ makeIA(codeOk.mesh, { scaleHover: true, onClick: () => { if (st.codeWheel.every(
 { const ch = new THREE.Group(); ch.position.set(-2.1, 0, -31.6); ch.rotation.y = Math.PI / 3; CUR.add(ch);
   S(new THREE.BoxGeometry(0.7, 0.32, 0.65), M.fabric, 0, 0.16, 0, ch); S(new THREE.BoxGeometry(0.7, 0.65, 0.15), M.fabric, 0, 0.6, -0.27, ch); }
 
-/* =========================================================
-   TUBA 7 – MÄNGUTUBA (z −39 … −33)
-   ========================================================= */
-CUR = roomG[6];
-const levers = [0, 1, 2, 3].map(i => {
-  const z = -34.6 - i * 0.38;
-  S(new THREE.BoxGeometry(0.04, 0.24, 0.14), M.darkMetal, 2.96, 1.2, z);
-  const g = new THREE.Group(); g.position.set(2.93, 1.2, z); CUR.add(g);
-  D(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 8).translate(0, 0.11, 0), M.metal, 0, 0, 0, g);
-  D(new THREE.SphereGeometry(0.035, 12, 10), new THREE.MeshLambertMaterial({ color: 0xe53935 }), 0, 0.22, 0, g);
-  makeIA(g, { onClick: () => flipLever(i) });
-  const n = litPlane(0.06, 0.06, 1200, (c, W, H) => { c.fillStyle = '#fff'; c.beginPath(); c.arc(W / 2, H / 2, W / 2 - 2, 0, 7); c.fill(); c.fillStyle = '#111'; c.font = `bold ${H * 0.6}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(i + 1), W / 2, H * 0.55); });
-  n.position.set(2.975, 1.42, z); n.rotation.y = -Math.PI / 2; CUR.add(n);
-  return g;
-});
-const leverPic = new CanvasPlane(1.3, 0.55, 500, false, true); leverPic.mesh.position.set(-2.965, 1.6, -35.1); leverPic.mesh.rotation.y = Math.PI / 2; CUR.add(leverPic.mesh);
-function drawLeverPic(){
-  leverPic.draw((c, W, H) => {
-    c.fillStyle = '#c99a4a'; c.fillRect(0, 0, W, H); c.fillStyle = '#bfe3ff'; c.fillRect(16, 16, W - 32, (H - 32) / 2); c.fillStyle = '#2f7fc1'; c.fillRect(16, H / 2, W - 32, (H - 32) / 2);
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    P.levers.forEach((up, i) => { const x = W * (0.16 + i * 0.227); c.font = `${H * 0.26}px ${FONT}`; c.fillText(up ? '🐦' : '🐟', x, up ? H * 0.3 : H * 0.72); c.fillStyle = '#fff'; c.font = `bold ${H * 0.1}px ${FONT}`; c.fillText(String(i + 1), x, H * 0.52); c.fillStyle = '#000'; });
-  });
-}
-function flipLever(i){
-  if (st.toyOpen) return;
-  st.levers[i] = !st.levers[i]; tone(300, .08, 0, 'square', .1);
-  const g = levers[i], r0 = g.rotation.z, r1 = st.levers[i] ? 0.6 : -0.6 + Math.PI;
-  tween(0.25, k => g.rotation.z = r0 + (r1 - r0) * ease(k));
-  if (st.levers.every((v, j) => v === P.levers[j])) delay(0.4, () => { st.toyOpen = true; sfx.unlock(); notify('Mänguasjakast avanes! 🎁', 3); tween(1, k => toyLid.rotation.x = 1.9 * ease(k)); });
-}
-const toyBox = new THREE.Group(); toyBox.position.set(2.2, 0, -38.3); CUR.add(toyBox);
-S(new THREE.BoxGeometry(0.8, 0.03, 0.5), M.labCab, 0, 0.015, 0, toyBox);
-for (const z of [-0.235, 0.235]) S(new THREE.BoxGeometry(0.8, 0.4, 0.03), new THREE.MeshLambertMaterial({ color: 0xffb300 }), 0, 0.2, z, toyBox);
-for (const x of [-0.385, 0.385]) S(new THREE.BoxGeometry(0.03, 0.4, 0.44), new THREE.MeshLambertMaterial({ color: 0xffb300 }), x, 0.2, 0, toyBox);
-const toyLid = new THREE.Group(); toyLid.position.set(0, 0.4, -0.25); toyBox.add(toyLid);
-S(new THREE.BoxGeometry(0.84, 0.05, 0.52), new THREE.MeshLambertMaterial({ color: 0xe53935 }), 0, 0.025, 0.26, toyLid);
-const BASKET = { x: -1.5, z: -38.2, r: 0.24, top: 0.55 }, LINE_Z = -35.8;
-D(new THREE.CylinderGeometry(BASKET.r, 0.2, BASKET.top, 20, 1, true), new THREE.MeshLambertMaterial({ color: 0x8d6e63, side: THREE.DoubleSide }), BASKET.x, BASKET.top / 2, BASKET.z);
-D(new THREE.TorusGeometry(BASKET.r, 0.015, 8, 24).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xff7043 }), BASKET.x, BASKET.top, BASKET.z);
-D(new THREE.PlaneGeometry(4, 0.08).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffeb3b }), -0.6, 0.006, LINE_Z);
-{ const t = litPlane(0.6, 0.12, 600, (c, W, H) => { c.fillStyle = '#ffeb3b'; c.font = `bold ${H * 0.7}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('VISKEJOON', W / 2, H * 0.55); }); t.geometry.rotateX(-Math.PI / 2); t.position.set(-0.6, 0.007, LINE_Z + 0.12); CUR.add(t); }
-const basketLamps = [0, 1, 2].map(i => D(new THREE.SphereGeometry(0.05, 12, 10), new THREE.MeshBasicMaterial({ color: 0x333333 }), BASKET.x - 0.15 + i * 0.15, 1.6, -38.96));
-for (const [c, x, z] of [[0xef5350, -2.4, -33.6], [0x42a5f5, 1.6, -33.5], [0x66bb6a, -2.5, -37.0]]) { D(new THREE.SphereGeometry(0.13, 14, 10), new THREE.MeshLambertMaterial({ color: c }), x, 2.3, z); D(new THREE.CylinderGeometry(0.003, 0.003, 0.7, 4), M.black, x, 2.65, z); }
-
 /* ---------- väljapääsu silt, mis liigub viimasesse tuppa ---------- */
 const exitSign = litPlane(1.0, 0.24, 600, (c, W, H) => { c.fillStyle = '#2e7d32'; roundRect(c, 0, 0, W, H, 20); c.fill(); c.fillStyle = '#fff'; c.font = `bold ${H * 0.55}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🚪 VÄLJAPÄÄS', W / 2, H * 0.55); });
 scene.add(exitSign);
 
 
 /* =========================================================
-   TUBA 8 – KOSMOS (kaaluta olek, ujumine kätega)
+   TUBA 7 – VEEALUNE KOOBAS (ujumine)  z −45 … −33, x ±5, y 0 … 7
    ========================================================= */
-const SPACE_C = new THREE.Vector3(0, 4, -56), SPACE_R = 20;
-const spaceVel = new THREE.Vector3();
+const waterG = roomG[6], WB = { x: 4.7, y0: 0.45, y1: 6.7, z0: -44.6, z1: -33.4 };
+const waterVel = new THREE.Vector3();
+scene.fog = new THREE.FogExp2(0x0b5470, 0);
+{
+  const sandTex = canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#c9b27c'; c.fillRect(0, 0, W, H); for (let i = 0; i < 4000; i++) { const v = 150 + Math.random() * 70; c.fillStyle = `rgba(${v},${v * 0.85 | 0},${v * 0.55 | 0},0.5)`; c.fillRect(Math.random() * W, Math.random() * H, 2, 2); } c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 3; for (let y = 10; y < H; y += 28) { c.beginPath(); for (let x = 0; x <= W; x += 16) c.lineTo(x, y + Math.sin(x / 20) * 5); c.stroke(); } });
+  const rockTex = canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#1d4f5c'; c.fillRect(0, 0, W, H); for (let i = 0; i < 70; i++) { c.fillStyle = `rgba(${10 + Math.random() * 40 | 0},${60 + Math.random() * 60 | 0},${70 + Math.random() * 50 | 0},0.6)`; c.beginPath(); c.arc(Math.random() * W, Math.random() * H, 8 + Math.random() * 30, 0, 7); c.fill(); } });
+  const surfTex = canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#5fd0e8'; c.fillRect(0, 0, W, H); c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 4; for (let i = 0; i < 26; i++) { c.beginPath(); const x = Math.random() * W, y = Math.random() * H; c.moveTo(x, y); c.bezierCurveTo(x + 30, y - 20, x + 50, y + 20, x + 80, y); c.stroke(); } });
+  surfTex.wrapS = surfTex.wrapT = THREE.RepeatWrapping; surfTex.repeat.set(3, 3); waterG.userData.surf = surfTex;
+  const sandM = new THREE.MeshLambertMaterial({ map: sandTex, emissive: 0x1a2a2a }); sandTex.wrapS = sandTex.wrapT = THREE.RepeatWrapping; sandTex.repeat.set(3, 3);
+  const rockM = new THREE.MeshLambertMaterial({ map: rockTex, emissive: 0x0a2830 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 12).rotateX(-Math.PI / 2), sandM); floor.position.set(0, 0, -39); waterG.add(floor);
+  const surf = new THREE.Mesh(new THREE.PlaneGeometry(10, 12).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ map: surfTex, transparent: true, opacity: 0.9 })); surf.position.set(0, 7, -39); waterG.add(surf);
+  for (const s of [1, -1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(12, 7).rotateY(-s * Math.PI / 2), rockM); w.position.set(5 * s, 3.5, -39); waterG.add(w); }
+  // otsaseinad ukseavaga
+  for (const [z, ry] of [[-33, Math.PI], [-45, 0]]) for (const [w, h, x, y] of [[4.45, 7, -2.775, 3.5], [4.45, 7, 2.775, 3.5], [1.1, 4.8, 0, 4.6]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).rotateY(ry), rockM); m.position.set(x, y, z + (ry ? -0.01 : 0.01)); waterG.add(m); }
+  // kaljusambad, korallid, vetikad
+  for (const [x, z, r, h] of [[-3.6, -35, 0.6, 4.5], [3.8, -38.2, 0.7, 5.0], [-3.8, -42.8, 0.5, 6.0], [2.0, -41, 0.35, 2.0]]) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.7, r, h, 9), rockM); m.position.set(x, h / 2, z); waterG.add(m); }
+  { const ledge = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.6, 0.25, 10), rockM); ledge.position.set(3.8, 5.0, -38.2); waterG.add(ledge); }
+  const coralCols = [0xff7043, 0xec407a, 0xffca28, 0xab47bc];
+  for (let i = 0; i < 14; i++) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.08 + Math.random() * 0.1, 0.4 + Math.random() * 0.5, 6), new THREE.MeshLambertMaterial({ color: coralCols[i % 4], emissive: coralCols[i % 4], emissiveIntensity: 0.25 })); m.position.set(-4.3 + Math.random() * 8.6, 0.25, -34 - Math.random() * 10.5); m.rotation.z = (Math.random() - 0.5) * 0.5; waterG.add(m); }
+  waterG.userData.weeds = [];
+  const weedM = new THREE.MeshLambertMaterial({ color: 0x2e9d4a, emissive: 0x0f3d1a, side: THREE.DoubleSide });
+  for (let i = 0; i < 22; i++) { const g = new THREE.Group(), h = 1 + Math.random() * 2.2; const m = new THREE.Mesh(new THREE.PlaneGeometry(0.18, h).translate(0, h / 2, 0), weedM); g.add(m); g.position.set((Math.random() < 0.5 ? -1 : 1) * (2.2 + Math.random() * 2.4), 0, -33.8 - Math.random() * 10.8); g.rotation.y = Math.random() * 3; g.userData.ph = Math.random() * 6; waterG.add(g); waterG.userData.weeds.push(g); }
+  // kalad
+  waterG.userData.fish = [];
+  for (let i = 0; i < 12; i++) {
+    const col = [0xffa726, 0x29b6f6, 0xffee58, 0xef5350][i % 4], g = new THREE.Group(), fm = new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 0.3 });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), fm); body.scale.set(0.55, 0.8, 1.6); g.add(body);
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.12, 4).rotateX(-Math.PI / 2), fm); tail.position.z = 0.2; g.add(tail);
+    g.userData = { r: 1.2 + Math.random() * 2.5, cx: (Math.random() - 0.5) * 3, cz: -36 - Math.random() * 6, y: 1 + Math.random() * 5, sp: (0.3 + Math.random() * 0.4) * (Math.random() < 0.5 ? 1 : -1), ph: Math.random() * 6, tail };
+    waterG.add(g); waterG.userData.fish.push(g);
+  }
+  // mullid
+  waterG.userData.bubbles = [];
+  const bubM = new THREE.MeshBasicMaterial({ color: 0xdff8ff, transparent: true, opacity: 0.5 });
+  for (let i = 0; i < 30; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.02 + Math.random() * 0.03, 8, 6), bubM); b.position.set((Math.random() - 0.5) * 9, Math.random() * 7, -33.5 - Math.random() * 11); waterG.add(b); waterG.userData.bubbles.push(b); }
+}
+// pärlid ja aardekirst
+const PEARLS = [[-3.4, 0.35, -36.2], [3.8, 5.35, -38.2], [-1.8, 3.4, -42.4]].map(([x, y, z], i) => {
+  const g = new THREE.Group(); g.position.set(x, y, z); waterG.add(g);
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.4, 1).rotateX(Math.PI), new THREE.MeshLambertMaterial({ color: 0xf8bbd0, emissive: 0x4a2030, side: THREE.DoubleSide })); shell.position.y = -0.02; g.add(shell);
+  const p = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffffff })); p.position.y = 0.06; g.add(p);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexW(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(0.7, 0.7, 1); glow.position.y = 0.06; g.add(glow);
+  g.userData.pearl = [p, glow]; makeIA(g, { onClick: () => collectPearl(i), enabled: () => p.visible });
+  return g;
+});
+function glowTexW(){ if (!glowTexW.t) glowTexW.t = canvasTex(128, 128, (c, W, H) => { const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2); g.addColorStop(0, 'rgba(220,250,255,0.9)'); g.addColorStop(1, 'rgba(120,220,255,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }); return glowTexW.t; }
+const tChest = new THREE.Group(); tChest.position.set(2.6, 0, -43.8); tChest.rotation.y = -0.4; waterG.add(tChest);
+{ const wm = new THREE.MeshLambertMaterial({ color: 0x8d5a2b, emissive: 0x2a1505 }); const bm = new THREE.MeshLambertMaterial({ color: 0xd4a017, emissive: 0x4a3500 });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), wm); b.position.y = 0.25; tChest.add(b);
+  for (const lx of [-0.3, 0.3]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.52, 0.62), bm); s.position.set(lx, 0.25, 0); tChest.add(s); }
+  const lid = new THREE.Group(); lid.position.set(0, 0.5, -0.3); tChest.add(lid); tChest.userData.lid = lid;
+  const l = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.9, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), wm); l.position.z = 0.3; lid.add(l);
+  for (let i = 0; i < 3; i++) { const sl = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshBasicMaterial({ color: 0x333333 })); sl.position.set(-0.2 + i * 0.2, 0.32, 0.31); tChest.add(sl); tChest.userData['slot' + i] = sl; }
+}
+makeDoor(-45, doorTexture('#0d2b45', 'rgba(255,255,255,0.08)', '🚀 KOSMOS', '#4fc3f7'), () => { if (!st.door[6]) { sfx.bad(); notify('Uks avaneb, kui aardekirstus on 3 pärlit 🦪'); } });
+function collectPearl(i){
+  const [p, glow] = PEARLS[i].userData.pearl; if (!p.visible || mode !== 'play') return;
+  p.visible = glow.visible = false; st.pearls++;
+  tChest.userData['slot' + (st.pearls - 1)].material.color.set(0xffffff);
+  sfx.collect ? sfx.collect() : sfx.ok(); sweep(600, 1500, 0.3, 'sine', 0.07);
+  if (st.pearls >= 3) { notify('🦪🦪🦪 Kõik pärlid! Aardekirst avaneb…', 3.5); tween(1.2, k => tChest.userData.lid.rotation.x = -1.6 * ease(k), () => requestDoor(6)); }
+  else notify(`🦪 Pärl ${st.pearls}/3`, 2.5);
+}
+function resetWater(){
+  st.pearls = 0; waterVel.set(0, 0, 0); tChest.userData.lid.rotation.x = 0;
+  PEARLS.forEach(g => g.userData.pearl.forEach(o => o.visible = true));
+  for (let i = 0; i < 3; i++) tChest.userData['slot' + i].material.color.set(0x333333);
+}
+function swimInputs(vel, dt, acc){
+  let mx = moveInput.x, my = moveInput.y, up = 0;
+  if (!renderer.xr.isPresenting) { mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0); my = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0); up = (keys.Space ? 1 : 0) - (keys.KeyC ? 1 : 0); if (keys.ArrowLeft) rig.rotation.y += 1.8 * dt; if (keys.ArrowRight) rig.rotation.y -= 1.8 * dt; }
+  if (Math.hypot(mx, my) > 0.15 || up) { camera.getWorldDirection(fwd); const right = tmpD.set(-fwd.z, 0, fwd.x).normalize(); vel.addScaledVector(fwd, -my * acc * dt).addScaledVector(right, mx * acc * dt); vel.y += up * acc * dt; }
+  for (const h of xrHands) {
+    if (!h.connected || h.held || h.pull || h.drag || !h.lvelW) continue;
+    if (!h.isHand && !h.sq) continue;
+    const sp = h.lvelW.length();
+    if (sp > 0.45) { vel.addScaledVector(h.lvelW, -2.6 * dt * Math.min(sp, 3) / sp * sp); if (Math.random() < dt * 6) pulse(h, 0.15, 15); }
+  }
+}
+function updateWater(dt, t){
+  const vis = waterG.visible;
+  scene.fog.density += ((st.inWater ? 0.075 : 0) - scene.fog.density) * Math.min(1, dt * 3);
+  if (!vis) { st.inWater = false; return; }
+  waterG.userData.surf.offset.x = t * 0.03; waterG.userData.surf.offset.y = t * 0.02;
+  for (const g of waterG.userData.weeds) g.rotation.z = Math.sin(t * 1.2 + g.userData.ph) * 0.18;
+  for (const f of waterG.userData.fish) { const u = f.userData, a = t * u.sp + u.ph; f.position.set(u.cx + Math.cos(a) * u.r, u.y + Math.sin(a * 2) * 0.2, u.cz + Math.sin(a) * u.r); f.rotation.y = -a + (u.sp > 0 ? Math.PI : 0); u.tail.rotation.y = Math.sin(t * 10 + u.ph) * 0.5; }
+  for (const b of waterG.userData.bubbles) { b.position.y += dt * 0.5; if (b.position.y > 7) b.position.y = 0; }
+  PEARLS.forEach((g, i) => g.userData.pearl[1].material.opacity = 0.6 + Math.sin(t * 3 + i) * 0.3);
+  camera.getWorldPosition(head);
+  const inW = settings.rooms >= 7 && mode === 'play' && head.z < -33.6 && head.z > -44.4;
+  st.inWater = inW;
+  if (!inW) { waterVel.set(0, 0, 0); return; }
+  swimInputs(waterVel, dt, 2.6);
+  waterVel.y -= 0.12 * dt;                                    // kerge vajumine
+  waterVel.multiplyScalar(Math.exp(-1.1 * dt)); if (waterVel.length() > 3) waterVel.setLength(3);
+  rig.position.addScaledVector(waterVel, dt);
+  camera.getWorldPosition(head);
+  const push = (ax, v) => { rig.position[ax] += v; if (Math.sign(waterVel[ax]) === -Math.sign(v)) waterVel[ax] *= -0.3; };
+  if (head.x > WB.x) push('x', WB.x - head.x); if (head.x < -WB.x) push('x', -WB.x - head.x);
+  if (head.y > WB.y1) push('y', WB.y1 - head.y); if (head.y < WB.y0) push('y', WB.y0 - head.y);
+  const inDoor = Math.abs(head.x) < 0.42 && head.y < 2.1 && rig.position.y < 0.4;
+  if (head.z > WB.z1 && !inDoor) push('z', WB.z1 - head.z);
+  if (head.z < WB.z0 && !(inDoor && st.door[6] && settings.rooms > 7)) push('z', WB.z0 - head.z);
+  const pts = [head.clone()]; for (const h of xrHands) if (h.connected) pts.push(handPoint(h, V3(0, 0, 0)));
+  PEARLS.forEach((g, i) => { if (!g.userData.pearl[0].visible) return; g.getWorldPosition(tmpV2); tmpV2.y += 0.06; if (pts.some(p => p.distanceTo(tmpV2) < 0.4)) collectPearl(i); });
+}
+
+/* =========================================================
+   TUBA 8 – KOSMOS: madal raskusjõud, hüppamine, laserlabürint
+   ========================================================= */
+const SPACE_C = new THREE.Vector3(0, 4, -62);
 const spaceG = roomG[7];
 {
   const starTex = canvasTex(2048, 1024, (c, W, H) => {
@@ -1221,48 +1284,64 @@ const spaceG = roomG[7];
   const sky = new THREE.Mesh(new THREE.SphereGeometry(70, 40, 20), new THREE.MeshBasicMaterial({ map: starTex, side: THREE.BackSide, depthWrite: false, fog: false }));
   sky.position.copy(SPACE_C); sky.renderOrder = -1; spaceG.add(sky);
   const planetTex = (c1, c2, bands) => canvasTex(512, 256, (c, W, H) => { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, c1); g.addColorStop(1, c2); c.fillStyle = g; c.fillRect(0, 0, W, H); for (let i = 0; i < bands; i++) { c.fillStyle = `rgba(255,255,255,${0.05 + Math.random() * 0.12})`; c.fillRect(0, Math.random() * H, W, 4 + Math.random() * 18); } });
-  const pl = (r, x, y, z, tex) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 40, 24), new THREE.MeshLambertMaterial({ map: tex, emissive: 0x222233 })); m.position.set(x, y, z); spaceG.add(m); return m; };
-  const big = pl(7, -30, 0, -76, planetTex('#d98c4a', '#7a3b1c', 14)); big.rotation.z = 0.3;
-  const ringed = pl(3.2, 22, 15, -68, planetTex('#e6d38f', '#a88a4a', 10));
-  const ring = new THREE.Mesh(new THREE.RingGeometry(4.2, 6.5, 64), new THREE.MeshBasicMaterial({ color: 0xe8d9a8, side: THREE.DoubleSide, transparent: true, opacity: 0.55 }));
+  const pl = (r, x, y, z, tex) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 40, 24), new THREE.MeshLambertMaterial({ map: tex, emissive: 0x222233, fog: false })); m.position.set(x, y, z); spaceG.add(m); return m; };
+  const big = pl(7, -30, 0, -82, planetTex('#d98c4a', '#7a3b1c', 14)); big.rotation.z = 0.3;
+  const ringed = pl(3.2, 22, 15, -74, planetTex('#e6d38f', '#a88a4a', 10));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(4.2, 6.5, 64), new THREE.MeshBasicMaterial({ color: 0xe8d9a8, side: THREE.DoubleSide, transparent: true, opacity: 0.55, fog: false }));
   ring.rotation.x = -1.2; ring.position.copy(ringed.position); spaceG.add(ring);
-  pl(1.6, 14, -6, -40, planetTex('#3b8fd9', '#1d5a2a', 6));
+  pl(1.6, 16, -6, -50, planetTex('#3b8fd9', '#1d5a2a', 6));
   const sunTex = canvasTex(256, 256, (c, W, H) => { const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2); g.addColorStop(0, 'rgba(255,255,230,1)'); g.addColorStop(0.25, 'rgba(255,220,120,0.9)'); g.addColorStop(1, 'rgba(255,150,40,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); });
-  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sun.scale.set(22, 22, 1); sun.position.set(35, 25, -110); spaceG.add(sun);
-  // asteroidid
-  const rockM = new THREE.MeshLambertMaterial({ color: 0x8a817a, emissive: 0x2e2a26 });
+  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); sun.scale.set(22, 22, 1); sun.position.set(35, 25, -116); spaceG.add(sun);
+  const rockM = new THREE.MeshLambertMaterial({ color: 0x8a817a, emissive: 0x2e2a26, fog: false });
   spaceG.userData.rocks = [];
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 26; i++) {
     const r = 0.2 + Math.random() * 0.7, m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), rockM);
-    let p; do { p = new THREE.Vector3((Math.random() - 0.5) * 36, -4 + Math.random() * 18, -44 - Math.random() * 30); } while (p.distanceTo(V3(0, 1.5, -41)) < 4);
-    m.position.copy(p); m.rotation.set(Math.random() * 3, Math.random() * 3, 0); m.userData.spin = V3(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(0.6);
+    const side = Math.random() < 0.5 ? -1 : 1;
+    m.position.set(side * (6 + Math.random() * 12), -5 + Math.random() * 16, -48 - Math.random() * 30); m.rotation.set(Math.random() * 3, Math.random() * 3, 0); m.userData.spin = V3(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(0.6);
     spaceG.add(m); spaceG.userData.rocks.push(m);
   }
-  // stardiplatvorm ja maja välissein
-  const plat = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.6, 0.12, 32), new THREE.MeshLambertMaterial({ color: 0x9aa4ad })); plat.position.set(0, -0.06, -41.2); spaceG.add(plat);
-  const glowRing = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.03, 8, 48).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x4fc3f7 })); glowRing.position.set(0, 0.01, -41.2); spaceG.add(glowRing);
-  const hullM = new THREE.MeshLambertMaterial({ color: 0x5c6670, side: THREE.DoubleSide });
-  for (const [w, h, x, y] of [[8, 9, -4.55, 0.5], [8, 9, 4.55, 0.5], [1.1, 6.8, 0, 5.55]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), hullM); m.position.set(x, y, -39.08); spaceG.add(m); }
-  const under = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 4), hullM); under.position.set(0, -2, -39.08); spaceG.add(under);
+  const hullM = new THREE.MeshLambertMaterial({ color: 0x5c6670, side: THREE.DoubleSide, fog: false });
+  for (const [w, h, x, y] of [[10, 12, -5.55, 2], [10, 12, 5.55, 2], [1.1, 9.8, 0, 7.1]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), hullM); m.position.set(x, y, -45.08); spaceG.add(m); }
+  const under = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 4), hullM); under.position.set(0, -2, -45.08); spaceG.add(under);
 }
-// tähekristallid
+// platvormid: [x, z, laius, sügavus, ülemine kõrgus]
+const PLATS = [[0, -46.6, 3, 3, 0], [0, -50.6, 2, 2, 0.5], [-2.4, -54.2, 2, 2, 1.2], [0.5, -57.8, 2.6, 2.2, 0.8], [3, -61.4, 2, 2, 1.8], [0, -65, 2.8, 2.6, 1.0], [-2.6, -69, 2, 2, 2.0], [0, -73, 3.6, 3.4, 1.2]].map(([x, z, w, d, top]) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.4, d), new THREE.MeshLambertMaterial({ color: 0x7b8794, emissive: 0x1c2630, fog: false })); m.position.set(x, top - 0.2, z); spaceG.add(m);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x4fc3f7, fog: false })); m.add(e);
+  return { x, z, w, d, top, m };
+});
+// laserid: funktsioon annab otspunktid
+const LASERS = [
+  t => { const p = PLATS[1], y = p.top + 1.0 + Math.sin(t * 1.1) * 0.7; return [V3(p.x - 1.3, y, p.z), V3(p.x + 1.3, y, p.z)]; },
+  t => { const p = PLATS[3], x = p.x + Math.sin(t * 1.3) * 1.15; return [V3(x, p.top, p.z), V3(x, p.top + 2.4, p.z)]; },
+  t => { const p = PLATS[5], a = t * 0.9; return [V3(p.x + Math.cos(a) * 1.5, p.top + 0.35, p.z + Math.sin(a) * 1.5), V3(p.x - Math.cos(a) * 1.5, p.top + 0.35, p.z - Math.sin(a) * 1.5)]; },
+  t => { const p = PLATS[7]; return [V3(p.x - 1.9, p.top + 0.4, p.z + 0.9), V3(p.x + 1.9, p.top + 0.4, p.z + 0.9)]; },
+  t => { const p = PLATS[7], x = p.x + Math.sin(t * 0.8) * 1.5; return [V3(x, p.top, p.z - 0.2), V3(x, p.top + 2.4, p.z - 0.2)]; }
+].map(fn => {
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1, 6), new THREE.MeshBasicMaterial({ color: 0xff3030, fog: false }));
+  const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 8), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  const em = [0, 1].map(() => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), new THREE.MeshLambertMaterial({ color: 0x333333, emissive: 0x550000, fog: false })); spaceG.add(b); return b; });
+  spaceG.add(core); spaceG.add(glow);
+  return { fn, core, glow, em, a: V3(0, 0, 0), b: V3(0, 0, 0) };
+});
 const starGlowTex = canvasTex(128, 128, (c, W, H) => { const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2); g.addColorStop(0, 'rgba(255,240,150,0.9)'); g.addColorStop(1, 'rgba(255,200,50,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); });
-const SPACE_STARS = [[-7, 6, -48], [8, 1.5, -57], [-2, 11, -64]].map(([x, y, z], i) => {
-  const g = new THREE.Group(); g.position.set(x, y, z); spaceG.add(g);
-  const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), new THREE.MeshBasicMaterial({ color: 0xffd54f })); g.add(m);
-  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: starGlowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(1.6, 1.6, 1); g.add(glow);
-  g.userData.base = y; makeIA(g, { onClick: () => collectStar(i), enabled: () => g.visible });
+const SPACE_STARS = [2, 4, 6].map((pi, i) => {
+  const p = PLATS[pi], g = new THREE.Group(); g.position.set(p.x, p.top + 1.35, p.z); spaceG.add(g);
+  const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.2), new THREE.MeshBasicMaterial({ color: 0xffd54f, fog: false })); g.add(m);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: starGlowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); glow.scale.set(1.2, 1.2, 1); g.add(glow);
+  g.userData.base = g.position.y; makeIA(g, { onClick: () => collectStar(i), enabled: () => g.visible });
   return g;
 });
 const portalTex = canvasTex(256, 256, (c, W, H) => { for (let r = W / 2; r > 0; r -= 6) { c.fillStyle = `hsl(${190 + r * 0.8},90%,${30 + (W / 2 - r) / 3}%)`; c.beginPath(); c.arc(W / 2, H / 2, r, 0, 7); c.fill(); } });
-const portal = new THREE.Group(); portal.position.set(0, 5, -70); spaceG.add(portal);
-const portalRing = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.13, 12, 48), new THREE.MeshBasicMaterial({ color: 0x555555 })); portal.add(portalRing);
-const portalDisc = new THREE.Mesh(new THREE.CircleGeometry(1.4, 48), new THREE.MeshBasicMaterial({ map: portalTex, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })); portal.add(portalDisc);
+const portal = new THREE.Group(); portal.position.set(PLATS[7].x, PLATS[7].top + 1.3, PLATS[7].z - 1.3); spaceG.add(portal);
+const portalRing = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.1, 12, 48), new THREE.MeshBasicMaterial({ color: 0x555555, fog: false })); portal.add(portalRing);
+const portalDisc = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48), new THREE.MeshBasicMaterial({ map: portalTex, side: THREE.DoubleSide, transparent: true, opacity: 0.9, fog: false })); portal.add(portalDisc);
 makeIA(portal, { onClick: () => enterPortal() });
+const sp = { vy: 0, ground: null, cp: PLATS[0], inv: 0, headVy: 0, lastHeadY: null };
 function collectStar(i){
   const g = SPACE_STARS[i]; if (!g.visible || mode !== 'play') return;
   g.visible = false; st.stars++; sfx.ok(); sweep(500, 1400, 0.4, 'sine', 0.08);
-  if (st.stars >= 3) { portalRing.material.color.set(0x4fc3f7); portalDisc.visible = true; notify('⭐⭐⭐ Kõik tähed! Portaal avanes – uju sinna! 🌀', 4); }
+  if (st.stars >= 3) { portalRing.material.color.set(0x4fc3f7); portalDisc.visible = true; notify('⭐⭐⭐ Kõik tähed! Portaal avanes 🌀', 4); }
   else notify(`⭐ Täht ${st.stars}/3`, 2.5);
 }
 function enterPortal(){
@@ -1271,43 +1350,72 @@ function enterPortal(){
   win();
 }
 function resetSpace(){
-  st.stars = 0; spaceVel.set(0, 0, 0);
+  st.stars = 0; sp.vy = 0; sp.ground = null; sp.cp = PLATS[0]; sp.inv = 0;
   SPACE_STARS.forEach(g => g.visible = true); portalRing.material.color.set(0x555555); portalDisc.visible = false;
 }
+function requestJump(){ if (st.inSpace && sp.ground && mode === 'play') { sp.vy = 3.4; sp.ground = null; sweep(250, 600, 0.25, 'sine', 0.07); } }
+function respawn(){
+  camera.getWorldPosition(head); const c = sp.cp;
+  rig.position.x += c.x - head.x; rig.position.z += c.z - head.z; rig.position.y = c.top; sp.vy = 0; sp.ground = c; sp.inv = 1.2;
+}
+const segDist = (p, a, b) => { tmpD.copy(b).sub(a); const l2 = tmpD.lengthSq(); let k = l2 ? tmpV2.copy(p).sub(a).dot(tmpD) / l2 : 0; k = clamp(k, 0, 1); return tmpV2.copy(a).addScaledVector(tmpD, k).distanceTo(p); };
 function updateSpace(dt, t){
   if (!spaceG.visible) { st.inSpace = false; return; }
   for (const r of spaceG.userData.rocks) { r.rotation.x += r.userData.spin.x * dt; r.rotation.y += r.userData.spin.y * dt; }
-  SPACE_STARS.forEach((g, i) => { g.rotation.y = t * 1.5; g.position.y = g.userData.base + Math.sin(t * 1.3 + i) * 0.25; });
+  SPACE_STARS.forEach((g, i) => { g.rotation.y = t * 1.5; g.position.y = g.userData.base + Math.sin(t * 1.3 + i) * 0.15; });
   portalDisc.rotation.z = -t * 1.2; portalRing.rotation.z = t * 0.3;
-  camera.getWorldPosition(head);
-  const inSp = settings.rooms === 8 && mode === 'play' && head.z < -39.6;
-  st.inSpace = inSp;
-  if (!inSp) { spaceVel.set(0, 0, 0); if (rig.position.y > 0) rig.position.y = Math.max(0, rig.position.y - dt * 2); return; }
-  // juhtkang / klaviatuur: lenda vaatamise suunas
-  let mx = moveInput.x, my = moveInput.y, up = 0;
-  if (!renderer.xr.isPresenting) { mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0); my = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0); up = (keys.Space ? 1 : 0) - (keys.KeyC ? 1 : 0); if (keys.ArrowLeft) rig.rotation.y += 1.8 * dt; if (keys.ArrowRight) rig.rotation.y -= 1.8 * dt; }
-  if (Math.hypot(mx, my) > 0.15 || up) {
-    camera.getWorldDirection(fwd); const right = tmpD.set(-fwd.z, 0, fwd.x).normalize();
-    spaceVel.addScaledVector(fwd, -my * 3.2 * dt).addScaledVector(right, mx * 3.2 * dt); spaceVel.y += up * 3.2 * dt;
+  for (const L of LASERS) {
+    const [a, b] = L.fn(t); L.a.copy(a); L.b.copy(b);
+    const mid = tmpV.copy(a).add(b).multiplyScalar(0.5), len = a.distanceTo(b);
+    for (const m of [L.core, L.glow]) { m.position.copy(mid); m.quaternion.setFromUnitVectors(UP, tmpD.copy(b).sub(a).normalize()); m.scale.set(1, len, 1); }
+    L.em[0].position.copy(a); L.em[1].position.copy(b);
   }
-  // ujumine: käe (või pult + külgnupp) liigutus lükkab sind vastassuunas
-  for (const h of xrHands) {
-    if (!h.connected || h.held || h.pull || h.drag || !h.lvelW) continue;
-    if (!h.isHand && !h.sq) continue;
-    const sp = h.lvelW.length();
-    if (sp > 0.45) { spaceVel.addScaledVector(h.lvelW, -2.4 * dt * Math.min(sp, 3) / sp * sp); if (Math.random() < dt * 6) pulse(h, 0.15, 15); }
-  }
-  spaceVel.multiplyScalar(Math.exp(-0.45 * dt)); if (spaceVel.length() > 4.5) spaceVel.setLength(4.5);
-  rig.position.addScaledVector(spaceVel, dt);
   camera.getWorldPosition(head);
-  // piirid
-  const d = tmpV.copy(head).sub(SPACE_C), dl = d.length();
-  if (dl > SPACE_R) { rig.position.addScaledVector(d, -(dl - SPACE_R) / dl); const vn = spaceVel.dot(d) / dl; if (vn > 0) spaceVel.addScaledVector(d, -1.5 * vn / dl); }
-  if (head.z > -39.6 && !(Math.abs(head.x) < 0.42 && head.y < 2.1 && rig.position.y < 0.4)) { rig.position.z -= head.z + 39.6; if (spaceVel.z > 0) spaceVel.z *= -0.4; }
-  // tähed ja portaal käe või peaga puudutades
-  const touchPts = [head.clone()]; for (const h of xrHands) if (h.connected) touchPts.push(handPoint(h, V3(0, 0, 0)));
-  SPACE_STARS.forEach((g, i) => { if (!g.visible) return; g.getWorldPosition(tmpV2); if (touchPts.some(p => p.distanceTo(tmpV2) < 0.45)) collectStar(i); });
-  if (st.stars >= 3 && head.distanceTo(portal.position) < 1.3) enterPortal();
+  const inS = settings.rooms >= 8 && mode === 'play' && head.z < -45.4;
+  st.inSpace = inS;
+  // füüsiline hüpe: pea liigub järsult üles
+  const ly = camera.position.y;
+  if (sp.lastHeadY != null) sp.headVy = sp.headVy * 0.6 + 0.4 * (ly - sp.lastHeadY) / Math.max(dt, 1e-3);
+  sp.lastHeadY = ly;
+  if (!inS) { sp.vy = 0; if (!st.inWater && rig.position.y !== 0) { const d = -rig.position.y; rig.position.y += Math.sign(d) * Math.min(Math.abs(d), dt * 2); } return; }
+  if (renderer.xr.isPresenting && sp.headVy > 0.9) requestJump();
+  const hs = xrHands.filter(h => h.connected && h.isHand && h.lvel);
+  if (hs.length === 2 && hs.every(h => h.lvel.y > 1.3)) requestJump();
+  if (!renderer.xr.isPresenting && keys.Space) requestJump();
+  // kõndimine
+  let mx = moveInput.x, my = moveInput.y;
+  if (!renderer.xr.isPresenting) { mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0); my = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0); if (keys.ArrowLeft) rig.rotation.y += 1.8 * dt; if (keys.ArrowRight) rig.rotation.y -= 1.8 * dt; }
+  const px = rig.position.x, pz = rig.position.z;
+  const ln = Math.hypot(mx, my);
+  if (ln > 0.15) { camera.getWorldDirection(fwd); fwd.y = 0; fwd.normalize(); const s = 2.3 * Math.min(1, ln) * dt / ln; rig.position.x += (fwd.x * -my + -fwd.z * mx) * s; rig.position.z += (fwd.z * -my + fwd.x * mx) * s; }
+  sp.vy -= 3.2 * dt; rig.position.y += sp.vy * dt;
+  camera.getWorldPosition(head);
+  // platvormi külg ees → tagasi
+  for (const p of PLATS) if (Math.abs(head.x - p.x) < p.w / 2 && Math.abs(head.z - p.z) < p.d / 2 && rig.position.y < p.top - 0.45 && rig.position.y > p.top - 2.2) { rig.position.x = px; rig.position.z = pz; camera.getWorldPosition(head); break; }
+  sp.ground = null;
+  for (const p of PLATS) {
+    if (Math.abs(head.x - p.x) < p.w / 2 + 0.05 && Math.abs(head.z - p.z) < p.d / 2 + 0.05 && sp.vy <= 0 && rig.position.y <= p.top + 0.02 && rig.position.y > p.top - 0.45) {
+      if (sp.vy < -1.5) sfx.step(); rig.position.y = p.top; sp.vy = 0; sp.ground = p; if (p !== sp.cp && PLATS.indexOf(p) > PLATS.indexOf(sp.cp)) sp.cp = p; break;
+    }
+  }
+  if (head.z > -45.4 && !(Math.abs(head.x) < 0.42 && rig.position.y < 0.3)) { rig.position.z -= head.z + 45.4; }
+  if (rig.position.y < -7) { notify('Kukkusid! Tagasi viimasele platvormile 🚀', 2.5); sfx.bad(); respawn(); return; }
+  // laserid
+  sp.inv -= dt;
+  if (sp.inv <= 0) {
+    camera.getWorldPosition(head);
+    const pts = []; for (let k = 0; k <= 4; k++) pts.push([V3(head.x, rig.position.y + 0.15 + (head.y - 0.1 - rig.position.y - 0.15) * k / 4, head.z), 0.13]);
+    for (const h of xrHands) if (h.connected) pts.push([handPoint(h, V3(0, 0, 0)), 0.06]);
+    if (LASERS.some(L => pts.some(([p, r]) => segDist(p, L.a, L.b) < r))) { notify('⚡ Laser! Tagasi kontrollpunkti', 2.5); sfx.bad(); tone(120, 0.3, 0, 'sawtooth', 0.12); for (const h of xrHands) pulse(h, 1, 200); respawn(); return; }
+  }
+  const touch = [head.clone()]; for (const h of xrHands) if (h.connected) touch.push(handPoint(h, V3(0, 0, 0)));
+  SPACE_STARS.forEach((g, i) => { if (!g.visible) return; g.getWorldPosition(tmpV2); if (touch.some(p => p.distanceTo(tmpV2) < 0.4)) collectStar(i); });
+  if (st.stars >= 3 && touch.some(p => p.distanceTo(portal.position) < 1.0)) enterPortal();
+}
+function startAt(room){
+  settings.rooms = 8; paintOpts(); newGame(); closeReader();
+  for (let i = 0; i < room; i++) { st.door[i] = true; st.visited[i] = true; DOORS[i].pivot.rotation.y = 1.75; }
+  if (room === 6) placePlayer(0, -32.4, 0); else { placePlayer(0, -45.8, 0); sp.cp = PLATS[0]; }
 }
 
 /* =========================================================
@@ -1317,7 +1425,7 @@ const GEAR_SPOTS = [
   [-2.45, 0, -1.6], [2.9, 1.30, -0.25], [-2.8, 2.005, 0.25], [2.8, 0, -2.85],
   [1.3, 1.715, -3.06], [-1.5, 1.315, -3.06], [2.62, 1.32, -6.2], [-2.85, 0.85, -7.0],
   [2.4, 0.765, -9.62], [-2.0, 0, -14.8], [2.4, 0.75, -14.45], [-2.85, 0, -9.4],
-  [-2.3, 0.9, -20.3], [2.75, 0, -20.8], [2.5, 0.75, -22.2], [-2.8, 0.85, -24.2], [-2.6, 0, -27.5], [2.4, 0.8, -29.5], [-2.7, 0, -33.4], [2.6, 0, -33.6]
+  [-2.3, 0.9, -20.3], [2.75, 0, -20.8], [2.5, 0.75, -22.2], [-2.8, 0.85, -24.2], [-2.6, 0, -27.5], [2.4, 0.8, -29.5]
 ];
 const gearGeo = (() => { const parts = [new THREE.CylinderGeometry(0.032, 0.032, 0.012, 20).rotateX(Math.PI / 2)]; for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5; parts.push(new THREE.BoxGeometry(0.014, 0.014, 0.012).translate(Math.cos(a) * 0.036, Math.sin(a) * 0.036, 0)); } return mergeGeometries(parts.map(p => p.index ? p.toNonIndexed() : p)); })();
 const gears = [0, 1, 2].map(() => { const g = new THREE.Group(); const m = D(gearGeo, M.gold, 0, 0.045, 0, g); g.userData.m = m; makeIA(g, { onClick: () => collectGear(g) }); return g; });
@@ -1437,11 +1545,6 @@ D(new THREE.CylinderGeometry(0.01, 0.012, 0.1, 10), M.brass, 0, -0.11, -0.03, ha
 finishItem(handMirrorObj, { item: 'mirror', onGrab: () => { if (!st.mirrorTaken) { st.mirrorTaken = true; notify('Käsipeegel! 🪞 Suuna see peegelkirjale.', 3); } } });
 const greenKeyObj = buildKey(new THREE.MeshLambertMaterial({ color: 0x66bb6a, emissive: 0x1b5e20 }), 1.3);
 finishItem(greenKeyObj, { item: 'greenkey', enabled: () => st.grown });
-const ballObjs = [0xef5350, 0x42a5f5, 0xffca28].map(col => {
-  const g = new THREE.Group(); D(new THREE.SphereGeometry(0.07, 18, 14), new THREE.MeshLambertMaterial({ color: col }), 0, 0, 0, g);
-  const o = finishItem(g, { item: 'ball', enabled: () => st.toyOpen && !g.userData.ia.scored });
-  return o;
-});
 Object.assign(items, {
   torch: { obj: torchObj, home: roomG[3], pos: V3(1.6, 0.9, -15.7), rotY: 0.5 },
   seed: { obj: seedObj, home: potDrawer, pos: V3(-2.58, 0.672, -23.5), rotY: 0 },
@@ -1449,7 +1552,6 @@ Object.assign(items, {
   mirror: { obj: handMirrorObj, home: roomG[5], pos: V3(-2.8, 1.215, -28.6), rotY: Math.PI / 2 },
   greenkey: { obj: greenKeyObj, home: flower, pos: V3(0, 0.02, 0), rotY: 0, hidden: true }
 });
-ballObjs.forEach((o, i) => items['ball' + i] = { obj: o, home: toyBox, pos: V3(-0.2 + i * 0.2, 0.03, 0), rotY: 0 });
 // rohelise võtme lukk kasvuhoone uksel
 const greenLock = new THREE.Group(); greenLock.position.set(0.86, 1.25, 0.03); DOORS[4].pivot.add(greenLock);
 D(new THREE.BoxGeometry(0.1, 0.14, 0.012), new THREE.MeshLambertMaterial({ color: 0x66bb6a, emissive: 0x0b3d0b }), 0, 0, 0, greenLock);
@@ -1609,7 +1711,7 @@ function drawMenu(){
   menuPanel.draw((c, W, H) => {
     panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.065}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.62));
-    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Professor Nupu maja • kuni 8 tuba (8. on kosmos 🚀) • pultidega või paljaste kätega', W / 2, H * mY(0.545));
+    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Professor Nupu maja • kuni 8 tuba (7. vesi 🌊, 8. kosmos 🚀) • pultidega või paljaste kätega', W / 2, H * mY(0.545));
     c.fillStyle = '#fff'; c.textAlign = 'left'; c.font = `bold ${H * 0.033}px ${FONT}`;
     c.fillText('Raskusaste', W * 0.03, H * mY(ROW.diff)); c.fillText('Taimer', W * 0.03, H * mY(ROW.timer)); c.fillText('Tubade arv', W * 0.03, H * mY(ROW.rooms)); c.fillText('Õppimine', W * 0.03, H * mY(ROW.learn)); c.fillText('Muusika', W * 0.03, H * mY(ROW.music));
     c.textAlign = 'center'; c.fillStyle = '#b0bec5'; c.font = `${H * 0.028}px ${FONT}`;
@@ -1617,7 +1719,7 @@ function drawMenu(){
     c.fillText(b ? `🏆 Parim aeg (${DIFF[settings.diff].label}, ${settings.rooms} tuba): ${fmtTime(b.t)} • ${'★'.repeat(b.s)}` : `🏆 Parimat aega (${DIFF[settings.diff].label}, ${settings.rooms} tuba) veel pole`, W / 2, H * mY(-0.17));
     c.fillStyle = "#90a4ae"; c.font = `${H * 0.019}px ${FONT}`;
     c.fillText('PULDID: päästik = kasuta/võta • külgnupp = haara • vasak kang = liigu • parem kang = pööra • Y/B = paus', W / 2, H * mY(-0.5));
-    c.fillText('KÄED: näpista õhku ja tõmba = liigu • näpista põrandale = teleport • näpista = võta • vajuta nuppe sõrmega • viska käega • vasaku randme ⏸ nupp = paus', W / 2, H * mY(-0.55));
+    c.fillText('KÄED: näpista õhku ja tõmba = liigu • näpista põrandale = teleport • näpista = võta • vajuta nuppe sõrmega • vasaku randme ⏸ nupp = paus', W / 2, H * mY(-0.55));
     c.fillText('Õpetaja küsimused saab sisestada arvutis (nupp "📚 Õpetaja küsimused" lehe ülaosas).', W / 2, H * mY(-0.6));
   });
 }
@@ -1633,8 +1735,9 @@ function paintOpts(){
 const addOpt = (key, val, label, x, y, w) => { const b = makeButton(label, w, 0.085, () => { settings[key] = val; paintOpts(); }, { fs: 0.42 }); b.userData.val = val; b.position.set(x, y, 0.01); menuUI.add(b); optBtns[key].push(b); };
 [['kerge', '🙂 Kerge'], ['tavaline', '😐 Tavaline'], ['raske', '😈 Raske']].forEach(([v, l], i) => addOpt('diff', v, l, -0.25 + i * 0.36, ROW.diff, 0.33));
 [[0, '⏳ Väljas'], [30, '30 min'], [45, '45 min']].forEach(([v, l], i) => addOpt('timer', v, l, -0.25 + i * 0.36, ROW.timer, 0.33));
-for (let n = 1; n <= 8; n++) addOpt('rooms', n, n === 8 ? '8🚀' : String(n), -0.38 + (n - 1) * 0.145, ROW.rooms, n === 8 ? 0.15 : 0.125);
-{ const b = makeButton('🚀 Otse kosmosesse', 0.5, 0.085, () => startSpace(), { color: '#283593', fs: 0.42 }); b.position.set(0.33, ROW.music, 0.01); menuUI.add(b); }
+for (let n = 1; n <= 8; n++) addOpt('rooms', n, n === 7 ? '7🌊' : n === 8 ? '8🚀' : String(n), -0.38 + (n - 1) * 0.145, ROW.rooms, n >= 7 ? 0.14 : 0.125);
+{ const b = makeButton('🌊 Otse vette', 0.34, 0.085, () => startAt(6), { color: '#00838f', fs: 0.42 }); b.position.set(0.13, ROW.music, 0.01); menuUI.add(b); }
+{ const b = makeButton('🚀 Otse kosmosesse', 0.4, 0.085, () => startAt(7), { color: '#283593', fs: 0.42 }); b.position.set(0.53, ROW.music, 0.01); menuUI.add(b); }
 LEARN.forEach(([v, l], i) => addOpt('learn', v, l, -0.36 + i * 0.235, ROW.learn, 0.22));
 { const b = makeButton('🎵 Sees', 0.33, 0.085, () => { settings.music = !settings.music; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.25, ROW.music, 0.01); menuUI.add(b); optBtns.music.push(b); }
 { const b = makeButton('▶ Alusta', 0.55, 0.13, () => newGame(), { color: '#e65100', fs: 0.45 }); b.position.set(0, -0.33, 0.01); menuUI.add(b); }
@@ -1674,8 +1777,8 @@ const ROOM_TEXTS = [null, ['🧪 Labor', LAB_TEXT], ['🔭 Tähetorn', OBS_TEXT]
   ['🔦 Kelder', 'Siin on pime nagu kotis! 🔦\n\nUkse avab surve: keera kolm ventiili õigeks. Õiged numbrid kirjutasin kriidiga seinale – aga ilma valguseta ei näe sa midagi. Taskulamp on ukse kõrval tünni peal.\n\n– Professor Nupp'],
   ['🌱 Kasvuhoone', 'Tere tulemast kasvuhoonesse! 🌱\n\nVõti kasvab siin lille sees. Leia seemned, istuta need suurde potti ja kasta taime.\n\n– Professor Nupp'],
   ['📻 Raadiotuba', 'Raadiotuba 📻\n\nMinu salajane raadiojaam saadab koodi morsetähestikus. Jaama sageduse kirjutasin peegelkirjas seinale – riiulil on käsipeegel.\n\n– Professor Nupp'],
-  ['🎈 Mängutuba', 'Mängutuba! 🎈\n\nAva mänguasjakast õigete hoobadega (vaata maali) ja viska kolm palli korvi – aga ainult viskejoone tagant!\n\n– Professor Nupp'],
-  ['🚀 Kosmos', 'Kosmos! 🚀 Siin pole raskusjõudu.\n\nUJU KÄTEGA: lükka käega taha – liigud ette. Või näpista õhku ja tõmba end edasi. Pultidega: juhtkang lendab sinna, kuhu vaatad (või hoia külgnuppu ja ujuta).\n\nKorja 3 helendavat tähte ⭐ (puuduta neid) ja uju avanenud portaali 🌀\n\n– Professor Nupp']];
+  ['🌊 Veealune koobas', 'Veealune koobas! 🌊\n\nUJU KÄTEGA: lükka kätega taha – liigud ette (nagu rinnuliujumine). Või näpista vett ja tõmba end edasi. Pultidega: juhtkang ujub sinna, kuhu vaatad, või hoia külgnuppu ja ujuta pultidega.\n\nLeia 3 pärlit 🦪 (puuduta neid) – siis avaneb aardekirst ja uks kosmosesse.\n\n– Professor Nupp'],
+  ['🚀 Kosmos', 'Kosmos! 🚀 Siin on raskusjõud väike – saad kõrgele hüpata!\n\nHÜPPA: hüppa päriselt, või viska mõlemad käed järsult üles. Pultidega: A/X nupp. Arvutis: tühik.\n\nHüppa platvormilt platvormile ja ÄRA PUUDUTA PUNASEID LASEREID ⚡ – muidu lähed tagasi. Korja 3 tähte ⭐ ja mine portaali 🌀\n\n– Professor Nupp']];
 
 let P = {}, st = {}, mode = 'menu', elapsed = 0, entry = '', kpMsg = null;
 function setupPuzzle(){
@@ -1757,13 +1860,10 @@ function applyPuzzle(){
   const n = settings.rooms;
   outsideBox.position.set(0, 1.15, ROOMS[n - 1].z0 - 0.65); outLight.position.set(0, 1.6, ROOMS[n - 1].z0 - 0.6); exitSign.position.set(0, 2.5, ROOMS[n - 1].z0 + 0.016);
   DOORS.forEach((d, i) => d.pivot.visible = i < n);
-  outsideBox.visible = exitSign.visible = n < 8; resetSpace();
+  outsideBox.visible = exitSign.visible = n < 8; resetSpace(); resetWater();
   valves.forEach((v, i) => { v.rotation.x = 0; drawGauge(i); }); drawChalk();
   potDrawer.position.x = 0; plant.visible = false; plant.scale.setScalar(0.08); petals.forEach(p => p.rotation.z = 0);
   drawDial(); radioLamp.material.color.set(0x331100); drawMirrorText(); [0, 1, 2].forEach(drawCodeWheel);
-  levers.forEach((g, i) => g.rotation.z = st.levers[i] ? 0.6 : Math.PI - 0.6); drawLeverPic(); toyLid.rotation.x = 0;
-  basketLamps.forEach(l => l.material.color.set(0x333333)); ballObjs.forEach(b => b.userData.ia.scored = false);
-  for (const f of flying) f.it.userData.ia.flying = false; flying.length = 0;
   quizPanels.forEach((p, i) => { p.g.visible = settings.learn !== 'off' && i < n; drawQuiz(i); });
   resetItems();
   rebuildColliders();
@@ -1771,7 +1871,7 @@ function applyPuzzle(){
 
 /* ---------- tuba 1 tegevused ---------- */
 let lightV = 0;
-const ROOM_LIGHT = [[0, 2.1, 0, 0xfff1dc, () => 9 * lightV], [0, 2.2, -6, 0xf2f8ff, () => 8], [0, 2.25, -12, 0xffc98a, () => 5], [0, 2.2, -18, 0x8899aa, () => 0], [0, 2.3, -24, 0xf4ffe8, () => 9], [0, 2.2, -30, 0xffd9a0, () => 5], [0, 2.2, -36, 0xffffff, () => 8], [0, 3, -42, 0xffffff, () => 0]];
+const ROOM_LIGHT = [[0, 2.1, 0, 0xfff1dc, () => 9 * lightV], [0, 2.2, -6, 0xf2f8ff, () => 8], [0, 2.25, -12, 0xffc98a, () => 5], [0, 2.2, -18, 0x8899aa, () => 0], [0, 2.3, -24, 0xf4ffe8, () => 9], [0, 2.2, -30, 0xffd9a0, () => 5], [0, 6.5, -39, 0x7fd8ff, () => 7], [0, 3, -50, 0xffffff, () => 0]];
 function setRoomLight(L, i){ if (i < 0) { L.intensity = 0; return; } const c = ROOM_LIGHT[i]; L.position.set(c[0], c[1], c[2]); L.color.set(c[3]); L.intensity = c[4](); }
 function setLights(v){ lightV = v; M.ceil.color.set(0x3b352d).lerp(new THREE.Color(0xbdb5a3), clamp(v, 0, 1)); bulbMat.emissive.setRGB(1, 0.95, 0.8).multiplyScalar(0.12 + 0.88 * v); }
 function setKeypadPower(on){
@@ -2053,7 +2153,7 @@ function currentHint(){
     return 'Keera peegleid (klõpsa neil), et laserkiir jõuaks ukse kõrval olevasse vastuvõtjasse. Iga klõps keerab peeglit 45°.';
   }
   if (cur === 2) {
-    if (!st.lensIn) { if (!st.vaseBroken) return 'Vaasis kõliseb midagi… Võta vaas ja lase sel põrandale kukkuda (või viska)!'; if (!st.lensTaken) return 'Kildude vahel on lääts. Võta see.'; return 'Pane lääts teleskoobi okulaari: hoia läätse käes ja klõpsa teleskoobil.'; }
+    if (!st.lensIn) { if (!st.vaseBroken) return 'Vaasis kõliseb midagi… Võta vaas ja lase sel põrandale kukkuda!'; if (!st.lensTaken) return 'Kildude vahel on lääts. Võta see.'; return 'Pane lääts teleskoobi okulaari: hoia läätse käes ja klõpsa teleskoobil.'; }
     if (!st.teleSeen) return 'Vaata teleskoobist – tähed moodustavad numbri.';
     if (!st.melodyDone) return st.boxOpen ? 'Mängi muusikakarbi meloodia ksülofonil järele. Kalliskivi värv näitab, millist plaati lüüa. Kätega saad plaate sõrmega lüüa!' : 'Klõpsa muusikakarbil ja jäta värvide järjekord meelde.';
     if (!st.pianoRead) return 'Ksülofoni ees olev karbike avanes – tõmba see lahti ja loe kaarti.';
@@ -2072,9 +2172,10 @@ function currentHint(){
     if (st.freq !== P.freq) return 'Seinal on peegelkiri – loe seda riiulil oleva käsipeegliga. Seal on raadiojaama sagedus. Keera raadiot nuppudega ◀ ▶.';
     return 'Raadio piiksub morset. Tõlgi numbrid seinal oleva morsetabeli abil ja sisesta need ukse kõrval olevale lukule.';
   }
-  if (cur === 7) return st.stars < 3 ? `Uju kosmoses: lükka kätega taha või näpista õhku ja tõmba. Pultidega juhtkang. Puuduta helendavaid tähti ⭐ (${st.stars}/3).` : 'Kõik tähed käes! Uju sinisesse portaali 🌀';
-  if (!st.toyOpen) return 'Maal näitab, millised hoovad peavad olema üleval (🐦) ja millised all (🐟). Hoobadel on numbrid 1–4.';
-  return `Viska pallid korvi viskejoone tagant! VR-is viska käega, arvutis vajuta F (sihi hiirega). Korvis ${st.balls}/3.`;
+  if (cur === 6) return st.pearls < 3 ? `Uju koopas ringi: lükka kätega taha või näpista vett ja tõmba. Pärleid 🦪 on kolm: üks põhjas, üks kõrgel kaljusambal, üks vetikate vahel (${st.pearls}/3).` : 'Kirst on lahti – uju uksest kosmosesse!';
+  if (cur === 7) return st.stars < 3 ? `Hüppa platvormidel (päris hüpe, käed järsult üles, A/X või tühik). Väldi lasereid ⚡ – oota, kuni laser on eemal. Tähti ${st.stars}/3.` : 'Kõik tähed käes! Mine portaali 🌀';
+  if (false) return st.stars < 3 ? `Uju kosmoses: lükka kätega taha või näpista õhku ja tõmba. Pultidega juhtkang. Puuduta helendavaid tähti ⭐ (${st.stars}/3).` : 'Kõik tähed käes! Uju sinisesse portaali 🌀';
+  return 'Uju kosmoses tähtede juurde ⭐';
 }
 function showHint(){
   if (mode !== 'play') return;
@@ -2091,11 +2192,6 @@ function newGame(){
   elapsed = 0; mode = 'play';
   placePlayer(0, 1.3, 0);
   openReader('✉️ Kiri laual', startText());
-}
-function startSpace(){
-  settings.rooms = 8; paintOpts(); newGame(); closeReader();
-  for (let i = 0; i < 7; i++) { st.door[i] = true; st.visited[i] = true; DOORS[i].pivot.rotation.y = 1.75; }
-  placePlayer(0, -38.4, 0);
 }
 function goMenu(){ tweens.length = 0; hideMenus(); mode = 'menu'; setupPuzzle(); applyPuzzle(); placePlayer(0, 1.3, 0); paintOpts(); placeInFront(menuUI, 1.4, -0.05); menuUI.visible = true; }
 function openPause(){
@@ -2162,6 +2258,31 @@ function placePlayer(x, z, yaw = 0){
 const raycaster = new THREE.Raycaster();
 const mouseHolder = new THREE.Group(); mouseHolder.position.set(0.17, -0.15, -0.4); camera.add(mouseHolder);
 const mouseHand = { kind: 'mouse', holder: mouseHolder, held: null };
+
+/* ---------- pultide asemel virtuaalsed käed ---------- */
+const skinM = new THREE.MeshLambertMaterial({ color: 0xf1c8a8, emissive: 0x3a2418 });
+function makeCtrlHand(){
+  const g = new THREE.Group(); g.rotation.x = -0.35; g.position.set(0, -0.015, 0.05);
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.026, 0.085), skinM); palm.position.set(0, 0, 0); g.add(palm);
+  const fingers = [];
+  [[-0.027, 0.04], [-0.009, 0.044], [0.009, 0.042], [0.026, 0.036]].forEach(([x, len], i) => {
+    const f1 = new THREE.Group(); f1.position.set(x, 0, -0.043); g.add(f1);
+    const s1 = new THREE.Mesh(new THREE.CapsuleGeometry(0.0085, len * 0.55, 3, 8).rotateX(Math.PI / 2), skinM); s1.position.z = -len * 0.4; f1.add(s1);
+    const f2 = new THREE.Group(); f2.position.z = -len * 0.8; f1.add(f2);
+    const s2 = new THREE.Mesh(new THREE.CapsuleGeometry(0.008, len * 0.45, 3, 8).rotateX(Math.PI / 2), skinM); s2.position.z = -len * 0.35; f2.add(s2);
+    fingers.push([f1, f2]);
+  });
+  const t1 = new THREE.Group(); t1.position.set(-0.04, -0.004, -0.01); t1.rotation.set(0, 0.7, 0.3); g.add(t1);
+  const ts = new THREE.Mesh(new THREE.CapsuleGeometry(0.0095, 0.035, 3, 8).rotateX(Math.PI / 2), skinM); ts.position.z = -0.025; t1.add(ts);
+  g.userData = { fingers, thumb: t1 };
+  return g;
+}
+function poseCtrlHand(h){
+  const u = h.body.userData; if (!u.fingers) return;
+  const tr = h.trigV || 0, gr = h.gripV || 0;
+  u.fingers.forEach(([f1, f2], i) => { const c = i === 0 ? tr : gr; f1.rotation.x = -c * 1.3; f2.rotation.x = -c * 1.5; });
+  u.thumb.rotation.x = -(Math.max(tr, gr)) * 0.5;
+}
 const xrHands = [];
 const handFactory = new XRHandModelFactory();
 const wristPause = makeButton('⏸', 0.06, 0.06, () => { if (mode === 'play') openPause(); else if (mode === 'pause') closePause(); }, { color: '#455a64', fs: 0.6 });
@@ -2174,10 +2295,10 @@ for (let i = 0; i < 2; i++) {
   const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
   line.visible = false; ctrl.add(line);
   const dot = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffe066 })); dot.visible = false; scene.add(dot);
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.03, 0.11), new THREE.MeshLambertMaterial({ color: 0x2a2a2a })); body.position.z = 0.03; grip.add(body);
+  const body = makeCtrlHand(); grip.add(body);
   const stream = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1, 6).translate(0, -0.5, 0), new THREE.MeshBasicMaterial({ color: 0xffffff })); stream.visible = false; scene.add(stream);
   const h = { kind: 'xr', ctrl, grip, hand, holder, line, dot, body, stream, pourT: 0, held: null, bySqueeze: false, handedness: null, connected: false, isHand: false, drag: null, vel: new THREE.Vector3(), lastP: null, poking: null };
-  ctrl.addEventListener('connected', e => { h.connected = true; h.handedness = e.data.handedness; h.isHand = !!e.data.hand; body.visible = !h.isHand; });
+  ctrl.addEventListener('connected', e => { h.connected = true; h.handedness = e.data.handedness; h.isHand = !!e.data.hand; body.visible = !h.isHand; body.scale.x = h.handedness === 'left' ? -1 : 1; });
   ctrl.addEventListener('disconnected', () => { if (h.held) dropFall(h); h.connected = false; h.drag = null; });
   ctrl.addEventListener('selectstart', () => onSelectStart(h));
   ctrl.addEventListener('selectend', () => onSelectEnd(h));
@@ -2241,7 +2362,7 @@ function onSelectStart(h){
   }
   if (mode === 'play' && r && !r.root && !h.held && r.hit.face) {
     const n = r.hit.face.normal.clone().transformDirection(r.hit.object.matrixWorld);
-    if (n.y > 0.7 && r.hit.point.y < 0.1) { if (!h.isHand && !st.inSpace) teleportTo(h, r.hit.point); return; }
+    if (n.y > 0.7 && r.hit.point.y < 0.1) { if (!h.isHand && !st.inSpace && !st.inWater) teleportTo(h, r.hit.point); return; }
   }
   doAction(h, r);
   if (h.held) pulse(h);
@@ -2290,7 +2411,7 @@ function trackHands(dt){
     if (!h.lvel) { h.lvel = new THREE.Vector3(); h.lvelW = new THREE.Vector3(); }
     if (h.lastLP) h.lvel.lerp(tmpD.copy(lp).sub(h.lastLP).divideScalar(Math.max(dt, 1e-3)), 0.5);
     h.lastLP = lp; h.lvelW.copy(h.lvel).applyQuaternion(rig.quaternion);
-    if (!h.isHand) continue;
+    if (!h.isHand) { poseCtrlHand(h); continue; }
     // näpistuse tuvastus otse sõrmeliigestest
     const pd = pinchDist(h);
     if (!h.pinch && pd < 0.022) { h.pinch = true; if (mode === 'play' && !h.held && !h.drag) h.pull = { anchor: p.clone(), moved: 0, t: 0 }; }
@@ -2298,7 +2419,8 @@ function trackHands(dt){
       h.pinch = false;
       const pl = h.pull; h.pull = null;
       if (pl && mode === 'play' && !h.held) {
-        if (st.inSpace) spaceVel.copy(h.lvelW).multiplyScalar(-1.1);
+        if (st.inWater) waterVel.copy(h.lvelW).multiplyScalar(-1.1);
+        else if (st.inSpace) {}
         else if (pl.moved < 0.05 && pl.t < 0.7) { const r = cast(h); if (r && !r.root && r.hit.face && r.hit.point.y < 0.1) { const n = r.hit.face.normal.clone().transformDirection(r.hit.object.matrixWorld); if (n.y > 0.7) teleportTo(h, r.hit.point); } }
       }
     }
@@ -2306,10 +2428,11 @@ function trackHands(dt){
       if (h.held || h.drag || mode !== 'play') { h.pull = null; continue; }
       h.pull.t += dt;
       const dlt = tmpD.copy(h.pull.anchor).sub(p);
-      if (!st.inSpace) dlt.y = 0;
+      if (!st.inWater) dlt.y = 0;
       if (dlt.length() > 0.25) dlt.setLength(0.25);
       camera.getWorldPosition(head);
-      if (st.inSpace) { rig.position.add(dlt); spaceVel.multiplyScalar(0.8); }
+      if (st.inWater) { rig.position.add(dlt); waterVel.multiplyScalar(0.8); }
+      else if (st.inSpace) { rig.position.x += dlt.x; rig.position.z += dlt.z; }
       else if (!blocked(head.x + dlt.x, head.z + dlt.z)) { rig.position.x += dlt.x; rig.position.z += dlt.z; }
       else if (!blocked(head.x + dlt.x, head.z)) rig.position.x += dlt.x;
       else if (!blocked(head.x, head.z + dlt.z)) rig.position.z += dlt.z;
@@ -2318,60 +2441,8 @@ function trackHands(dt){
     }
   }
 }
-/* ---------- viskamine ja füüsika ---------- */
-const flying = [];
-function throwItem(it, p, v){
-  camera.getWorldPosition(head);
-  roomAt(p.z).add(it); it.position.copy(p); it.visible = true; it.userData.ia.flying = true;
-  flying.push({ it, v, t: 0, maxY: p.y, fromZ: head.z });
-  sweep(700, 250, 0.2, 'sine', 0.06);
-}
-function desktopThrow(){
-  if (!mouseHand.held || mode !== 'play') return;
-  const it = mouseHand.held; it.getWorldPosition(tmpV); const p = tmpV.clone();
-  const r = cast(mouseHand); let target;
-  if (r) target = r.hit.point.clone(); else { raycaster.setFromCamera(mouseNDC, camera); target = raycaster.ray.at(4, V3(0, 0, 0)); }
-  const T = clamp(p.distanceTo(target) / 6, 0.35, 1.0);
-  const v = target.sub(p).divideScalar(T); v.y += 0.5 * 9.8 * T;
-  mouseHand.held = null; throwItem(it, p, v);
-}
-function updatePhysics(dt){
-  for (let i = flying.length - 1; i >= 0; i--) {
-    const f = flying[i], it = f.it, ia = it.userData.ia;
-    f.t += dt; f.v.y -= 9.8 * dt;
-    const p0 = it.position.clone(), step = f.v.clone().multiplyScalar(dt), len = step.length();
-    if (ia.item === 'ball') {
-      const nx = p0.x + step.x, ny = p0.y + step.y, nz = p0.z + step.z;
-      if (Math.hypot(nx - BASKET.x, nz - BASKET.z) < BASKET.r - 0.05 && ny < BASKET.top && ny > 0.05 && f.v.y < 0 && p0.y >= BASKET.top - 0.15) { flying.splice(i, 1); ia.flying = false; ballInBasket(it, f); continue; }
-    }
-    let landed = null;
-    if (len > 1e-5) {
-      raycaster.set(p0, tmpD.copy(step).divideScalar(len)); raycaster.far = len + 0.04;
-      const hit = raycaster.intersectObjects(statics.filter(shown), false).find(x => x.face);
-      if (hit) {
-        const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-        if (n.y > 0.5 || f.t > 3) landed = hit.point;
-        else { f.v.sub(n.clone().multiplyScalar(2 * f.v.dot(n))).multiplyScalar(0.45); it.position.copy(hit.point).addScaledVector(n, 0.04); tone(180, 0.05, 0, 'triangle', 0.08); continue; }
-      }
-    }
-    if (!landed && (f.t > 5 || p0.y < -0.5)) { landed = clampRoom(p0.clone()); landed.y = surfaceBelow(landed); }
-    if (landed) { flying.splice(i, 1); ia.flying = false; placeItem(it, landed, rand() * 6.28, f.maxY); sfx.drop(); continue; }
-    it.position.add(step); it.rotation.x += dt * 6; it.rotation.z += dt * 3;
-    f.maxY = Math.max(f.maxY, it.position.y);
-  }
-}
-function ballInBasket(it, f){
-  if (f.fromZ > LINE_Z) {
-    st.balls++; it.userData.ia.scored = true;
-    roomG[6].add(it); it.position.set(BASKET.x + (rand() - 0.5) * 0.12, 0.08 + st.balls * 0.05, BASKET.z + (rand() - 0.5) * 0.12); it.rotation.set(0, 0, 0);
-    basketLamps[st.balls - 1].material.color.set(0x76ff03); sfx.collect(); notify(`Korvis! 🏀 ${st.balls}/3`, 2.5);
-    if (st.balls >= 3) delay(0.6, () => requestDoor(6));
-  } else {
-    notify('Viska joone tagant! 🏀', 3); sfx.bad();
-    roomG[6].add(it); it.position.set(BASKET.x + 0.45, it.userData.ia.restOffset, BASKET.z + 0.3); it.rotation.set(0, 0, 0);
-  }
-}
 
+const flying = [];
 const allHands = [mouseHand, ...xrHands];
 const mouseNDC = new THREE.Vector2(0, 0);
 
@@ -2447,7 +2518,6 @@ function placeItem(it, p, yaw, fromY){
   const ia = it.userData.ia;
   if (ia.fragile && fromY != null && fromY - p.y > 0.45) { breakVase(it, p); return; }
   if (ia.item === 'seed' && mode === 'play') { pot.getWorldPosition(tmpV2); if (Math.hypot(p.x - tmpV2.x, p.z - tmpV2.z) < 0.35) { roomG[4].add(it); it.visible = false; st.seeded = true; plant.visible = true; plant.scale.setScalar(0.08); sfx.ok(); notify('Seeme on mullas 🌱 Nüüd kasta!', 3); return; } }
-  if (ia.item === 'ball' && Math.hypot(p.x - BASKET.x, p.z - BASKET.z) < 0.4) { notify('Viska joone tagant! 🏀', 3); p = V3(BASKET.x + 0.45, 0, BASKET.z + 0.3); }
   for (const zn of zones) {
     zn.obj.getWorldPosition(tmpV2);
     if (Math.hypot(p.x - tmpV2.x, p.z - tmpV2.z) < zn.r && Math.abs(p.y - (tmpV2.y + zn.top)) < 0.12) {
@@ -2468,7 +2538,6 @@ function dropAt(h, hit){
 function dropFall(h){
   const it = h.held; if (!it) return;
   it.getWorldPosition(tmpV); const fromY = tmpV.y;
-  if (h.kind === 'xr' && mode === 'play' && h.vel && h.vel.length() > 1.3) { h.held = null; throwItem(it, tmpV.clone(), h.vel.clone().multiplyScalar(1.15)); return; }
   if (mode === 'play') for (const o of interactives) {
     const ia = o.userData.ia;
     if (ia.accepts && !ia.noAutoUse && acceptsItem(ia, it.userData.ia.item) && iaOk(o)) { o.getWorldPosition(tmpV2); if (tmpV2.distanceTo(tmpV) < 0.3) { ia.onUse(h); return; } }
@@ -2564,8 +2633,7 @@ addEventListener('pointerup', e => {
   if (dragging && dragMoved < 6 && !renderer.xr.isPresenting) {
     setMouse(e); scene.updateMatrixWorld(true);
     const r = cast(mouseHand);
-    if (downBtn === 1) desktopThrow();
-    else if (downBtn === 2) { if (mouseHand.held && mode === 'play') { if (r && !r.root) dropAt(mouseHand, r.hit); else dropFall(mouseHand); } }
+    if (downBtn === 2) { if (mouseHand.held && mode === 'play') { if (r && !r.root) dropAt(mouseHand, r.hit); else dropFall(mouseHand); } }
     else doAction(mouseHand, r);
   }
   dragging = false;
@@ -2577,7 +2645,7 @@ addEventListener('pointermove', e => {
   rig.rotation.y -= dx * 0.004; pitch = clamp(pitch - dy * 0.004, -1.3, 1.3); camera.rotation.x = pitch;
   lastX = e.clientX; lastY = e.clientY;
 });
-addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Escape') togglePause(); if (e.code === 'KeyF') desktopThrow(); });
+addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Escape') togglePause(); });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
@@ -2598,8 +2666,9 @@ function readXR(){
       if (Math.abs(sx) > 0.7 && snapReady) { snapReady = false; rotateRigAroundHead(sx > 0 ? -Math.PI / 6 : Math.PI / 6); }
       else if (Math.abs(sx) < 0.3) snapReady = true;
     }
+    { const hh = xrHands.find(x => x.handedness === hd); if (hh) { hh.trigV = b[0] ? b[0].value : 0; hh.gripV = b[1] ? b[1].value : 0; } }
     edge(hd + 'Y', b[5] && b[5].pressed, togglePause);
-    edge(hd + 'X', b[4] && b[4].pressed, () => { const h = xrHands.find(x => x.handedness === hd); if (h && h.held && mode === 'play') dropFall(h); });
+    edge(hd + 'X', b[4] && b[4].pressed, () => { if (st.inSpace) { requestJump(); return; } const h = xrHands.find(x => x.handedness === hd); if (h && h.held && mode === 'play') dropFall(h); });
   }
 }
 
@@ -2610,8 +2679,7 @@ const BASE_COLLIDERS = [
   [1.8, 2.65, -12.6, -11.8], [-2.72, -2.28, -10.12, -9.68], [-2.78, -1.92, -12.55, -11.65], [1.98, 2.62, -10.17, -9.53], [-2.88, -1.52, -14.62, -13.78], [1.93, 2.57, -14.72, -14.18],
   [1.3, 1.9, -16.0, -15.4], [2.0, 2.6, -16.2, -15.6], [-2.6, -2.0, -20.6, -20.0], [-1.9, -1.3, -20.8, -20.2], [2.48, 3, -19.3, -16.7],
   [-3, -2.28, -24.45, -22.55], [0.85, 1.55, -25.15, -24.45], [2.0, 2.8, -22.8, -22.0], [2.4, 3, -26.6, -23.3],
-  [2.1, 3, -30.65, -29.35], [-2.6, -1.6, -32.1, -31.1], [-3, -2.65, -29.5, -28.3],
-  [2.7, 3, -35.9, -34.4], [1.75, 2.65, -38.6, -38.0], [-1.78, -1.22, -38.48, -37.92]
+  [2.1, 3, -30.65, -29.35], [-2.6, -1.6, -32.1, -31.1], [-3, -2.65, -29.5, -28.3]
 ];
 let COLLIDERS = BASE_COLLIDERS.slice();
 function rebuildColliders(){ COLLIDERS = BASE_COLLIDERS.slice(); mirrors.forEach(m => { const x = m.g.position.x, z = m.g.position.z; COLLIDERS.push([x - 0.2, x + 0.2, z - 0.2, z + 0.2]); }); }
@@ -2626,7 +2694,7 @@ function blocked(x, z){
 }
 let stepAcc = 0;
 function move(dt){
-  if (st.inSpace) return;
+  if (st.inSpace || st.inWater) return;
   let mx = 0, my = 0;
   if (!renderer.xr.isPresenting) {
     if (keys.KeyW || keys.ArrowUp) my -= 1; if (keys.KeyS || keys.ArrowDown) my += 1;
@@ -2712,9 +2780,9 @@ renderer.setAnimationLoop(() => {
     }
   }
   updateTweens(dt);
-  trackHands(dt); updateDrags(); updatePhysics(dt);
+  trackHands(dt); updateDrags();
   const curRoom = updateRoomVis();
-  updateSpace(dt, t);
+  updateWater(dt, t); updateSpace(dt, t);
   const hTgt = curRoom === 3 ? 0.12 : 1.1 + 1.1 * lightV; hemi.intensity += (hTgt - hemi.intensity) * Math.min(1, dt * 6); moon.intensity = curRoom === 3 ? 0 : 0.7;
   if (roomG[1].visible) updateScale(dt);
   if (!renderer.xr.isPresenting) aimMouseHolder();
@@ -2732,3 +2800,4 @@ renderer.setAnimationLoop(() => {
 </script>
 </body>
 </html>
+
