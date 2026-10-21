@@ -1,4 +1,4 @@
-[index (4).html](https://github.com/user-attachments/files/33779359/index.4.html)
+[Uploading index (5).html…]()
 <!doctype html>
 <html lang="et">
 <head>
@@ -51,8 +51,8 @@ camera.position.set(0, 1.6, 0);
 const hemi = new THREE.HemisphereLight(0xfff0dd, 0x45352a, 1.1); scene.add(hemi);
 const moon = new THREE.DirectionalLight(0x9fb4ff, 0.7); moon.position.set(6, 3.5, 0.2); scene.add(moon);
 const deskLight = new THREE.PointLight(0xffc27a, 0.6, 0, 2); deskLight.position.set(2.62, 1.06, -0.32); scene.add(deskLight);
-const ceilLight = new THREE.PointLight(0xfff1dc, 0, 0, 2); ceilLight.position.set(0, 2.42, 0); scene.add(ceilLight);
-const labLight = new THREE.PointLight(0xf2f8ff, 9, 0, 2); labLight.position.set(0, 2.6, -6); scene.add(labLight);
+const ceilLight = new THREE.PointLight(0xfff1dc, 0, 0, 2); ceilLight.position.set(0, 2.1, 0); scene.add(ceilLight);
+const labLight = new THREE.PointLight(0xf2f8ff, 8, 0, 2); labLight.position.set(0, 2.2, -6); scene.add(labLight);
 const obsLight = new THREE.PointLight(0xffc98a, 5, 0, 2); obsLight.position.set(0, 2.25, -12); scene.add(obsLight);
 const outLight = new THREE.PointLight(0xfffbe8, 0, 0, 2); outLight.position.set(0, 1.6, -15.6); scene.add(outLight);
 
@@ -288,8 +288,8 @@ const M = {
   plank: new THREE.MeshLambertMaterial({ map: plankTex }),
   trim: new THREE.MeshLambertMaterial({ color: 0x4a311c }),
   greyTrim: new THREE.MeshLambertMaterial({ color: 0x8b979c }),
-  ceil: new THREE.MeshLambertMaterial({ color: 0xd9d2c3 }),
-  labCeil: new THREE.MeshLambertMaterial({ color: 0xeef2f2 }),
+  ceil: new THREE.MeshBasicMaterial({ color: 0x3b352d }),
+  labCeil: new THREE.MeshBasicMaterial({ color: 0xd5dcdf }),
   stars: new THREE.MeshBasicMaterial({ map: starTex }),
   wood: new THREE.MeshLambertMaterial({ map: woodTex }),
   woodDark: new THREE.MeshLambertMaterial({ map: woodTex, color: 0x9a7a60 }),
@@ -789,11 +789,11 @@ const mirrors = [0, 1, 2].map(i => {
 const receptor = new THREE.Group(); CUR.add(receptor);
 S(new THREE.BoxGeometry(0.2, 0.2, 0.08), M.darkMetal, 0, 0, 0, receptor);
 const recLens = D(new THREE.SphereGeometry(0.05, 16, 12), new THREE.MeshLambertMaterial({ color: 0x440000, emissive: 0x330000 }), 0, 0, 0.04, receptor);
-const beamMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a }), glowMat = new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false });
+const beamMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a }), glowMat = new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
 const beamSegs = [];
 for (let i = 0; i < 12; i++) {
   const g = new THREE.Group(); g.visible = false; CUR.add(g);
-  D(new THREE.BoxGeometry(1, 0.008, 0.008), beamMat, 0, 0, 0, g); D(new THREE.BoxGeometry(1, 0.03, 0.03), glowMat, 0, 0, 0, g);
+  D(new THREE.BoxGeometry(1, 0.012, 0.012), beamMat, 0, 0, 0, g); D(new THREE.BoxGeometry(1, 0.05, 0.05), glowMat, 0, 0, 0, g);
   beamSegs.push(g);
 }
 const beamDot = D(new THREE.SphereGeometry(0.03, 10, 8), glowMat, 0, 0, 0); beamDot.visible = false;
@@ -1248,7 +1248,7 @@ function applyPuzzle(){
 }
 
 /* ---------- tuba 1 tegevused ---------- */
-function setLights(v){ hemi.intensity = 1.1 + 1.1 * v; ceilLight.intensity = 10 * v; bulbMat.emissive.setRGB(1, 0.95, 0.8).multiplyScalar(0.12 + 0.88 * v); }
+function setLights(v){ hemi.intensity = 1.1 + 1.1 * v; ceilLight.intensity = 9 * v; M.ceil.color.set(0x3b352d).lerp(new THREE.Color(0xbdb5a3), clamp(v, 0, 1)); bulbMat.emissive.setRGB(1, 0.95, 0.8).multiplyScalar(0.12 + 0.88 * v); }
 function setKeypadPower(on){
   ledMat.color.set(on ? 0x003300 : 0x330000); ledMat.emissive.set(on ? 0x00ff44 : 0x550000);
   kpButtons.forEach(b => b.material.color.set(on ? 0xffffff : 0x666666)); drawKeypad();
