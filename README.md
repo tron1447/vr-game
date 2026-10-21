@@ -1,4 +1,4 @@
-[index (8).html](https://github.com/user-attachments/files/33780777/index.8.html)
+[Uploading index (9).html…]()
 <!doctype html>
 <html lang="et">
 <head>
@@ -354,7 +354,7 @@ function coloredMerge(parts){
 /* =========================================================
    REGISTER: toad, staatilised ja klõpsatavad objektid
    ========================================================= */
-const NR = 7;
+const NR = 8;
 const ROOMS = Array.from({ length: NR }, (_, i) => ({ z0: 3 - 6 * (i + 1), z1: 3 - 6 * i }));
 const roomG = ROOMS.map(() => { const g = new THREE.Group(); scene.add(g); return g; });
 let CUR = roomG[0];
@@ -1205,6 +1205,111 @@ for (const [c, x, z] of [[0xef5350, -2.4, -33.6], [0x42a5f5, 1.6, -33.5], [0x66b
 const exitSign = litPlane(1.0, 0.24, 600, (c, W, H) => { c.fillStyle = '#2e7d32'; roundRect(c, 0, 0, W, H, 20); c.fill(); c.fillStyle = '#fff'; c.font = `bold ${H * 0.55}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🚪 VÄLJAPÄÄS', W / 2, H * 0.55); });
 scene.add(exitSign);
 
+
+/* =========================================================
+   TUBA 8 – KOSMOS (kaaluta olek, ujumine kätega)
+   ========================================================= */
+const SPACE_C = new THREE.Vector3(0, 4, -56), SPACE_R = 20;
+const spaceVel = new THREE.Vector3();
+const spaceG = roomG[7];
+{
+  const starTex = canvasTex(2048, 1024, (c, W, H) => {
+    c.fillStyle = '#03030c'; c.fillRect(0, 0, W, H);
+    for (const [x, y, r, col] of [[0.3, 0.4, 0.25, 'rgba(120,40,160,0.25)'], [0.7, 0.6, 0.3, 'rgba(30,80,170,0.22)'], [0.5, 0.2, 0.18, 'rgba(200,60,120,0.15)']]) { const g = c.createRadialGradient(x * W, y * H, 0, x * W, y * H, r * W); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+    for (let i = 0; i < 3500; i++) { const b = 150 + Math.random() * 105, r = Math.random() < 0.97 ? 0.7 + Math.random() * 0.9 : 2 + Math.random() * 1.5; c.fillStyle = `rgb(${b},${b},${Math.min(255, b + 30)})`; c.beginPath(); c.arc(Math.random() * W, Math.random() * H, r, 0, 7); c.fill(); }
+  });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(70, 40, 20), new THREE.MeshBasicMaterial({ map: starTex, side: THREE.BackSide, depthWrite: false, fog: false }));
+  sky.position.copy(SPACE_C); sky.renderOrder = -1; spaceG.add(sky);
+  const planetTex = (c1, c2, bands) => canvasTex(512, 256, (c, W, H) => { const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, c1); g.addColorStop(1, c2); c.fillStyle = g; c.fillRect(0, 0, W, H); for (let i = 0; i < bands; i++) { c.fillStyle = `rgba(255,255,255,${0.05 + Math.random() * 0.12})`; c.fillRect(0, Math.random() * H, W, 4 + Math.random() * 18); } });
+  const pl = (r, x, y, z, tex) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 40, 24), new THREE.MeshLambertMaterial({ map: tex, emissive: 0x222233 })); m.position.set(x, y, z); spaceG.add(m); return m; };
+  const big = pl(7, -30, 0, -76, planetTex('#d98c4a', '#7a3b1c', 14)); big.rotation.z = 0.3;
+  const ringed = pl(3.2, 22, 15, -68, planetTex('#e6d38f', '#a88a4a', 10));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(4.2, 6.5, 64), new THREE.MeshBasicMaterial({ color: 0xe8d9a8, side: THREE.DoubleSide, transparent: true, opacity: 0.55 }));
+  ring.rotation.x = -1.2; ring.position.copy(ringed.position); spaceG.add(ring);
+  pl(1.6, 14, -6, -40, planetTex('#3b8fd9', '#1d5a2a', 6));
+  const sunTex = canvasTex(256, 256, (c, W, H) => { const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2); g.addColorStop(0, 'rgba(255,255,230,1)'); g.addColorStop(0.25, 'rgba(255,220,120,0.9)'); g.addColorStop(1, 'rgba(255,150,40,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); });
+  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sun.scale.set(22, 22, 1); sun.position.set(35, 25, -110); spaceG.add(sun);
+  // asteroidid
+  const rockM = new THREE.MeshLambertMaterial({ color: 0x8a817a, emissive: 0x2e2a26 });
+  spaceG.userData.rocks = [];
+  for (let i = 0; i < 28; i++) {
+    const r = 0.2 + Math.random() * 0.7, m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), rockM);
+    let p; do { p = new THREE.Vector3((Math.random() - 0.5) * 36, -4 + Math.random() * 18, -44 - Math.random() * 30); } while (p.distanceTo(V3(0, 1.5, -41)) < 4);
+    m.position.copy(p); m.rotation.set(Math.random() * 3, Math.random() * 3, 0); m.userData.spin = V3(Math.random() - 0.5, Math.random() - 0.5, 0).multiplyScalar(0.6);
+    spaceG.add(m); spaceG.userData.rocks.push(m);
+  }
+  // stardiplatvorm ja maja välissein
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.6, 0.12, 32), new THREE.MeshLambertMaterial({ color: 0x9aa4ad })); plat.position.set(0, -0.06, -41.2); spaceG.add(plat);
+  const glowRing = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.03, 8, 48).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x4fc3f7 })); glowRing.position.set(0, 0.01, -41.2); spaceG.add(glowRing);
+  const hullM = new THREE.MeshLambertMaterial({ color: 0x5c6670, side: THREE.DoubleSide });
+  for (const [w, h, x, y] of [[8, 9, -4.55, 0.5], [8, 9, 4.55, 0.5], [1.1, 6.8, 0, 5.55]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), hullM); m.position.set(x, y, -39.08); spaceG.add(m); }
+  const under = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 4), hullM); under.position.set(0, -2, -39.08); spaceG.add(under);
+}
+// tähekristallid
+const starGlowTex = canvasTex(128, 128, (c, W, H) => { const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W / 2); g.addColorStop(0, 'rgba(255,240,150,0.9)'); g.addColorStop(1, 'rgba(255,200,50,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H); });
+const SPACE_STARS = [[-7, 6, -48], [8, 1.5, -57], [-2, 11, -64]].map(([x, y, z], i) => {
+  const g = new THREE.Group(); g.position.set(x, y, z); spaceG.add(g);
+  const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), new THREE.MeshBasicMaterial({ color: 0xffd54f })); g.add(m);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: starGlowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.set(1.6, 1.6, 1); g.add(glow);
+  g.userData.base = y; makeIA(g, { onClick: () => collectStar(i), enabled: () => g.visible });
+  return g;
+});
+const portalTex = canvasTex(256, 256, (c, W, H) => { for (let r = W / 2; r > 0; r -= 6) { c.fillStyle = `hsl(${190 + r * 0.8},90%,${30 + (W / 2 - r) / 3}%)`; c.beginPath(); c.arc(W / 2, H / 2, r, 0, 7); c.fill(); } });
+const portal = new THREE.Group(); portal.position.set(0, 5, -70); spaceG.add(portal);
+const portalRing = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.13, 12, 48), new THREE.MeshBasicMaterial({ color: 0x555555 })); portal.add(portalRing);
+const portalDisc = new THREE.Mesh(new THREE.CircleGeometry(1.4, 48), new THREE.MeshBasicMaterial({ map: portalTex, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })); portal.add(portalDisc);
+makeIA(portal, { onClick: () => enterPortal() });
+function collectStar(i){
+  const g = SPACE_STARS[i]; if (!g.visible || mode !== 'play') return;
+  g.visible = false; st.stars++; sfx.ok(); sweep(500, 1400, 0.4, 'sine', 0.08);
+  if (st.stars >= 3) { portalRing.material.color.set(0x4fc3f7); portalDisc.visible = true; notify('⭐⭐⭐ Kõik tähed! Portaal avanes – uju sinna! 🌀', 4); }
+  else notify(`⭐ Täht ${st.stars}/3`, 2.5);
+}
+function enterPortal(){
+  if (mode !== 'play') return;
+  if (st.stars < 3) { sfx.bad(); notify(`Portaal on kinni – korja enne 3 tähte ⭐ (${st.stars}/3)`); return; }
+  win();
+}
+function resetSpace(){
+  st.stars = 0; spaceVel.set(0, 0, 0);
+  SPACE_STARS.forEach(g => g.visible = true); portalRing.material.color.set(0x555555); portalDisc.visible = false;
+}
+function updateSpace(dt, t){
+  if (!spaceG.visible) { st.inSpace = false; return; }
+  for (const r of spaceG.userData.rocks) { r.rotation.x += r.userData.spin.x * dt; r.rotation.y += r.userData.spin.y * dt; }
+  SPACE_STARS.forEach((g, i) => { g.rotation.y = t * 1.5; g.position.y = g.userData.base + Math.sin(t * 1.3 + i) * 0.25; });
+  portalDisc.rotation.z = -t * 1.2; portalRing.rotation.z = t * 0.3;
+  camera.getWorldPosition(head);
+  const inSp = settings.rooms === 8 && mode === 'play' && head.z < -39.6;
+  st.inSpace = inSp;
+  if (!inSp) { spaceVel.set(0, 0, 0); if (rig.position.y > 0) rig.position.y = Math.max(0, rig.position.y - dt * 2); return; }
+  // juhtkang / klaviatuur: lenda vaatamise suunas
+  let mx = moveInput.x, my = moveInput.y, up = 0;
+  if (!renderer.xr.isPresenting) { mx = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0); my = (keys.KeyS || keys.ArrowDown ? 1 : 0) - (keys.KeyW || keys.ArrowUp ? 1 : 0); up = (keys.Space ? 1 : 0) - (keys.KeyC ? 1 : 0); if (keys.ArrowLeft) rig.rotation.y += 1.8 * dt; if (keys.ArrowRight) rig.rotation.y -= 1.8 * dt; }
+  if (Math.hypot(mx, my) > 0.15 || up) {
+    camera.getWorldDirection(fwd); const right = tmpD.set(-fwd.z, 0, fwd.x).normalize();
+    spaceVel.addScaledVector(fwd, -my * 3.2 * dt).addScaledVector(right, mx * 3.2 * dt); spaceVel.y += up * 3.2 * dt;
+  }
+  // ujumine: käe (või pult + külgnupp) liigutus lükkab sind vastassuunas
+  for (const h of xrHands) {
+    if (!h.connected || h.held || h.pull || h.drag || !h.lvelW) continue;
+    if (!h.isHand && !h.sq) continue;
+    const sp = h.lvelW.length();
+    if (sp > 0.45) { spaceVel.addScaledVector(h.lvelW, -2.4 * dt * Math.min(sp, 3) / sp * sp); if (Math.random() < dt * 6) pulse(h, 0.15, 15); }
+  }
+  spaceVel.multiplyScalar(Math.exp(-0.45 * dt)); if (spaceVel.length() > 4.5) spaceVel.setLength(4.5);
+  rig.position.addScaledVector(spaceVel, dt);
+  camera.getWorldPosition(head);
+  // piirid
+  const d = tmpV.copy(head).sub(SPACE_C), dl = d.length();
+  if (dl > SPACE_R) { rig.position.addScaledVector(d, -(dl - SPACE_R) / dl); const vn = spaceVel.dot(d) / dl; if (vn > 0) spaceVel.addScaledVector(d, -1.5 * vn / dl); }
+  if (head.z > -39.6 && !(Math.abs(head.x) < 0.42 && head.y < 2.1 && rig.position.y < 0.4)) { rig.position.z -= head.z + 39.6; if (spaceVel.z > 0) spaceVel.z *= -0.4; }
+  // tähed ja portaal käe või peaga puudutades
+  const touchPts = [head.clone()]; for (const h of xrHands) if (h.connected) touchPts.push(handPoint(h, V3(0, 0, 0)));
+  SPACE_STARS.forEach((g, i) => { if (!g.visible) return; g.getWorldPosition(tmpV2); if (touchPts.some(p => p.distanceTo(tmpV2) < 0.45)) collectStar(i); });
+  if (st.stars >= 3 && head.distanceTo(portal.position) < 1.3) enterPortal();
+}
+
 /* =========================================================
    KULDSED HAMMASRATTAD (boonus)
    ========================================================= */
@@ -1491,7 +1596,7 @@ const DIFF = {
 };
 const settings = Object.assign({ diff: 'tavaline', timer: 0, music: true, rooms: 3, learn: 'off' }, store('pt_settings') || {});
 if (!DIFF[settings.diff]) settings.diff = 'tavaline';
-settings.rooms = clamp(settings.rooms | 0 || 3, 1, 7);
+settings.rooms = clamp(settings.rooms | 0 || 3, 1, 8);
 const best = store('pt_best') || {};
 const bestKey = () => `${settings.diff}_${settings.rooms}`;
 const LEARN = [['off', 'Väljas'], ['math', '➗ Matem.'], ['est', '📖 Eesti k.'], ['eng', '🇬🇧 Inglise'], ['own', '✏️ Oma']];
@@ -1504,7 +1609,7 @@ function drawMenu(){
   menuPanel.draw((c, W, H) => {
     panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.065}px ${FONT}`; c.fillText('🔐 Põgenemistuba', W / 2, H * mY(0.62));
-    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Professor Nupu maja • kuni 7 tuba • pultidega või paljaste kätega', W / 2, H * mY(0.545));
+    c.fillStyle = '#cfd8dc'; c.font = `${H * 0.03}px ${FONT}`; c.fillText('Professor Nupu maja • kuni 8 tuba (8. on kosmos 🚀) • pultidega või paljaste kätega', W / 2, H * mY(0.545));
     c.fillStyle = '#fff'; c.textAlign = 'left'; c.font = `bold ${H * 0.033}px ${FONT}`;
     c.fillText('Raskusaste', W * 0.03, H * mY(ROW.diff)); c.fillText('Taimer', W * 0.03, H * mY(ROW.timer)); c.fillText('Tubade arv', W * 0.03, H * mY(ROW.rooms)); c.fillText('Õppimine', W * 0.03, H * mY(ROW.learn)); c.fillText('Muusika', W * 0.03, H * mY(ROW.music));
     c.textAlign = 'center'; c.fillStyle = '#b0bec5'; c.font = `${H * 0.028}px ${FONT}`;
@@ -1512,7 +1617,7 @@ function drawMenu(){
     c.fillText(b ? `🏆 Parim aeg (${DIFF[settings.diff].label}, ${settings.rooms} tuba): ${fmtTime(b.t)} • ${'★'.repeat(b.s)}` : `🏆 Parimat aega (${DIFF[settings.diff].label}, ${settings.rooms} tuba) veel pole`, W / 2, H * mY(-0.17));
     c.fillStyle = "#90a4ae"; c.font = `${H * 0.019}px ${FONT}`;
     c.fillText('PULDID: päästik = kasuta/võta • külgnupp = haara • vasak kang = liigu • parem kang = pööra • Y/B = paus', W / 2, H * mY(-0.5));
-    c.fillText('KÄED: näpista = võta/kasuta • näpista põrandale = teleport • vajuta nuppe sõrmega • viska käega • vasaku randme ⏸ nupp = paus', W / 2, H * mY(-0.55));
+    c.fillText('KÄED: näpista õhku ja tõmba = liigu • näpista põrandale = teleport • näpista = võta • vajuta nuppe sõrmega • viska käega • vasaku randme ⏸ nupp = paus', W / 2, H * mY(-0.55));
     c.fillText('Õpetaja küsimused saab sisestada arvutis (nupp "📚 Õpetaja küsimused" lehe ülaosas).', W / 2, H * mY(-0.6));
   });
 }
@@ -1528,7 +1633,8 @@ function paintOpts(){
 const addOpt = (key, val, label, x, y, w) => { const b = makeButton(label, w, 0.085, () => { settings[key] = val; paintOpts(); }, { fs: 0.42 }); b.userData.val = val; b.position.set(x, y, 0.01); menuUI.add(b); optBtns[key].push(b); };
 [['kerge', '🙂 Kerge'], ['tavaline', '😐 Tavaline'], ['raske', '😈 Raske']].forEach(([v, l], i) => addOpt('diff', v, l, -0.25 + i * 0.36, ROW.diff, 0.33));
 [[0, '⏳ Väljas'], [30, '30 min'], [45, '45 min']].forEach(([v, l], i) => addOpt('timer', v, l, -0.25 + i * 0.36, ROW.timer, 0.33));
-for (let n = 1; n <= 7; n++) addOpt('rooms', n, String(n), -0.36 + (n - 1) * 0.15, ROW.rooms, 0.13);
+for (let n = 1; n <= 8; n++) addOpt('rooms', n, n === 8 ? '8🚀' : String(n), -0.38 + (n - 1) * 0.145, ROW.rooms, n === 8 ? 0.15 : 0.125);
+{ const b = makeButton('🚀 Otse kosmosesse', 0.5, 0.085, () => startSpace(), { color: '#283593', fs: 0.42 }); b.position.set(0.33, ROW.music, 0.01); menuUI.add(b); }
 LEARN.forEach(([v, l], i) => addOpt('learn', v, l, -0.36 + i * 0.235, ROW.learn, 0.22));
 { const b = makeButton('🎵 Sees', 0.33, 0.085, () => { settings.music = !settings.music; paintOpts(); }, { fs: 0.42 }); b.position.set(-0.25, ROW.music, 0.01); menuUI.add(b); optBtns.music.push(b); }
 { const b = makeButton('▶ Alusta', 0.55, 0.13, () => newGame(), { color: '#e65100', fs: 0.45 }); b.position.set(0, -0.33, 0.01); menuUI.add(b); }
@@ -1568,7 +1674,8 @@ const ROOM_TEXTS = [null, ['🧪 Labor', LAB_TEXT], ['🔭 Tähetorn', OBS_TEXT]
   ['🔦 Kelder', 'Siin on pime nagu kotis! 🔦\n\nUkse avab surve: keera kolm ventiili õigeks. Õiged numbrid kirjutasin kriidiga seinale – aga ilma valguseta ei näe sa midagi. Taskulamp on ukse kõrval tünni peal.\n\n– Professor Nupp'],
   ['🌱 Kasvuhoone', 'Tere tulemast kasvuhoonesse! 🌱\n\nVõti kasvab siin lille sees. Leia seemned, istuta need suurde potti ja kasta taime.\n\n– Professor Nupp'],
   ['📻 Raadiotuba', 'Raadiotuba 📻\n\nMinu salajane raadiojaam saadab koodi morsetähestikus. Jaama sageduse kirjutasin peegelkirjas seinale – riiulil on käsipeegel.\n\n– Professor Nupp'],
-  ['🎈 Mängutuba', 'Mängutuba! 🎈\n\nAva mänguasjakast õigete hoobadega (vaata maali) ja viska kolm palli korvi – aga ainult viskejoone tagant!\n\n– Professor Nupp']];
+  ['🎈 Mängutuba', 'Mängutuba! 🎈\n\nAva mänguasjakast õigete hoobadega (vaata maali) ja viska kolm palli korvi – aga ainult viskejoone tagant!\n\n– Professor Nupp'],
+  ['🚀 Kosmos', 'Kosmos! 🚀 Siin pole raskusjõudu.\n\nUJU KÄTEGA: lükka käega taha – liigud ette. Või näpista õhku ja tõmba end edasi. Pultidega: juhtkang lendab sinna, kuhu vaatad (või hoia külgnuppu ja ujuta).\n\nKorja 3 helendavat tähte ⭐ (puuduta neid) ja uju avanenud portaali 🌀\n\n– Professor Nupp']];
 
 let P = {}, st = {}, mode = 'menu', elapsed = 0, entry = '', kpMsg = null;
 function setupPuzzle(){
@@ -1650,6 +1757,7 @@ function applyPuzzle(){
   const n = settings.rooms;
   outsideBox.position.set(0, 1.15, ROOMS[n - 1].z0 - 0.65); outLight.position.set(0, 1.6, ROOMS[n - 1].z0 - 0.6); exitSign.position.set(0, 2.5, ROOMS[n - 1].z0 + 0.016);
   DOORS.forEach((d, i) => d.pivot.visible = i < n);
+  outsideBox.visible = exitSign.visible = n < 8; resetSpace();
   valves.forEach((v, i) => { v.rotation.x = 0; drawGauge(i); }); drawChalk();
   potDrawer.position.x = 0; plant.visible = false; plant.scale.setScalar(0.08); petals.forEach(p => p.rotation.z = 0);
   drawDial(); radioLamp.material.color.set(0x331100); drawMirrorText(); [0, 1, 2].forEach(drawCodeWheel);
@@ -1663,7 +1771,7 @@ function applyPuzzle(){
 
 /* ---------- tuba 1 tegevused ---------- */
 let lightV = 0;
-const ROOM_LIGHT = [[0, 2.1, 0, 0xfff1dc, () => 9 * lightV], [0, 2.2, -6, 0xf2f8ff, () => 8], [0, 2.25, -12, 0xffc98a, () => 5], [0, 2.2, -18, 0x8899aa, () => 0], [0, 2.3, -24, 0xf4ffe8, () => 9], [0, 2.2, -30, 0xffd9a0, () => 5], [0, 2.2, -36, 0xffffff, () => 8]];
+const ROOM_LIGHT = [[0, 2.1, 0, 0xfff1dc, () => 9 * lightV], [0, 2.2, -6, 0xf2f8ff, () => 8], [0, 2.25, -12, 0xffc98a, () => 5], [0, 2.2, -18, 0x8899aa, () => 0], [0, 2.3, -24, 0xf4ffe8, () => 9], [0, 2.2, -30, 0xffd9a0, () => 5], [0, 2.2, -36, 0xffffff, () => 8], [0, 3, -42, 0xffffff, () => 0]];
 function setRoomLight(L, i){ if (i < 0) { L.intensity = 0; return; } const c = ROOM_LIGHT[i]; L.position.set(c[0], c[1], c[2]); L.color.set(c[3]); L.intensity = c[4](); }
 function setLights(v){ lightV = v; M.ceil.color.set(0x3b352d).lerp(new THREE.Color(0xbdb5a3), clamp(v, 0, 1)); bulbMat.emissive.setRGB(1, 0.95, 0.8).multiplyScalar(0.12 + 0.88 * v); }
 function setKeypadPower(on){
@@ -1964,6 +2072,7 @@ function currentHint(){
     if (st.freq !== P.freq) return 'Seinal on peegelkiri – loe seda riiulil oleva käsipeegliga. Seal on raadiojaama sagedus. Keera raadiot nuppudega ◀ ▶.';
     return 'Raadio piiksub morset. Tõlgi numbrid seinal oleva morsetabeli abil ja sisesta need ukse kõrval olevale lukule.';
   }
+  if (cur === 7) return st.stars < 3 ? `Uju kosmoses: lükka kätega taha või näpista õhku ja tõmba. Pultidega juhtkang. Puuduta helendavaid tähti ⭐ (${st.stars}/3).` : 'Kõik tähed käes! Uju sinisesse portaali 🌀';
   if (!st.toyOpen) return 'Maal näitab, millised hoovad peavad olema üleval (🐦) ja millised all (🐟). Hoobadel on numbrid 1–4.';
   return `Viska pallid korvi viskejoone tagant! VR-is viska käega, arvutis vajuta F (sihi hiirega). Korvis ${st.balls}/3.`;
 }
@@ -1982,6 +2091,11 @@ function newGame(){
   elapsed = 0; mode = 'play';
   placePlayer(0, 1.3, 0);
   openReader('✉️ Kiri laual', startText());
+}
+function startSpace(){
+  settings.rooms = 8; paintOpts(); newGame(); closeReader();
+  for (let i = 0; i < 7; i++) { st.door[i] = true; st.visited[i] = true; DOORS[i].pivot.rotation.y = 1.75; }
+  placePlayer(0, -38.4, 0);
 }
 function goMenu(){ tweens.length = 0; hideMenus(); mode = 'menu'; setupPuzzle(); applyPuzzle(); placePlayer(0, 1.3, 0); paintOpts(); placeInFront(menuUI, 1.4, -0.05); menuUI.visible = true; }
 function openPause(){
@@ -2127,7 +2241,7 @@ function onSelectStart(h){
   }
   if (mode === 'play' && r && !r.root && !h.held && r.hit.face) {
     const n = r.hit.face.normal.clone().transformDirection(r.hit.object.matrixWorld);
-    if (n.y > 0.7 && r.hit.point.y < 0.1) { teleportTo(h, r.hit.point); return; }
+    if (n.y > 0.7 && r.hit.point.y < 0.1) { if (!h.isHand && !st.inSpace) teleportTo(h, r.hit.point); return; }
   }
   doAction(h, r);
   if (h.held) pulse(h);
@@ -2157,12 +2271,51 @@ function updatePoke(){
   wristPause.visible = !!L && renderer.xr.isPresenting && (mode === 'play' || mode === 'pause');
   if (wristPause.visible) { const w = L.hand.joints && L.hand.joints['wrist']; if (w) { w.getWorldPosition(tmpV); w.getWorldQuaternion(tmpQ); wristPause.position.copy(tmpV).add(tmpD.set(0, 0.03, 0.06).applyQuaternion(tmpQ)); wristPause.quaternion.copy(tmpQ); wristPause.rotateX(-Math.PI / 2); } }
 }
+function localHandPoint(h, out){
+  if (h.isHand && h.hand.joints) { const a = h.hand.joints['index-finger-tip'], b = h.hand.joints['thumb-tip']; if (a && b) return out.copy(a.position).add(b.position).multiplyScalar(0.5); }
+  return out.copy(h.grip.position);
+}
+function pinchDist(h){
+  const j = h.hand.joints; if (!j) return 1; const a = j['index-finger-tip'], b = j['thumb-tip'];
+  if (!a || !b || !a.visible) return 1; return a.position.distanceTo(b.position);
+}
 function trackHands(dt){
   for (const h of xrHands) {
-    if (!h.connected) continue;
+    if (!h.connected) { h.pull = null; h.pinch = false; continue; }
     const p = handPoint(h, V3(0, 0, 0));
     if (h.lastP) h.vel.lerp(tmpD.copy(p).sub(h.lastP).divideScalar(Math.max(dt, 1e-3)), 0.5);
     h.lastP = p;
+    // käe kiirus ruumi suhtes (ei sõltu sellest, kas mängija ise liigub)
+    const lp = localHandPoint(h, V3(0, 0, 0));
+    if (!h.lvel) { h.lvel = new THREE.Vector3(); h.lvelW = new THREE.Vector3(); }
+    if (h.lastLP) h.lvel.lerp(tmpD.copy(lp).sub(h.lastLP).divideScalar(Math.max(dt, 1e-3)), 0.5);
+    h.lastLP = lp; h.lvelW.copy(h.lvel).applyQuaternion(rig.quaternion);
+    if (!h.isHand) continue;
+    // näpistuse tuvastus otse sõrmeliigestest
+    const pd = pinchDist(h);
+    if (!h.pinch && pd < 0.022) { h.pinch = true; if (mode === 'play' && !h.held && !h.drag) h.pull = { anchor: p.clone(), moved: 0, t: 0 }; }
+    else if (h.pinch && pd > 0.045) {
+      h.pinch = false;
+      const pl = h.pull; h.pull = null;
+      if (pl && mode === 'play' && !h.held) {
+        if (st.inSpace) spaceVel.copy(h.lvelW).multiplyScalar(-1.1);
+        else if (pl.moved < 0.05 && pl.t < 0.7) { const r = cast(h); if (r && !r.root && r.hit.face && r.hit.point.y < 0.1) { const n = r.hit.face.normal.clone().transformDirection(r.hit.object.matrixWorld); if (n.y > 0.7) teleportTo(h, r.hit.point); } }
+      }
+    }
+    if (h.pull) {
+      if (h.held || h.drag || mode !== 'play') { h.pull = null; continue; }
+      h.pull.t += dt;
+      const dlt = tmpD.copy(h.pull.anchor).sub(p);
+      if (!st.inSpace) dlt.y = 0;
+      if (dlt.length() > 0.25) dlt.setLength(0.25);
+      camera.getWorldPosition(head);
+      if (st.inSpace) { rig.position.add(dlt); spaceVel.multiplyScalar(0.8); }
+      else if (!blocked(head.x + dlt.x, head.z + dlt.z)) { rig.position.x += dlt.x; rig.position.z += dlt.z; }
+      else if (!blocked(head.x + dlt.x, head.z)) rig.position.x += dlt.x;
+      else if (!blocked(head.x, head.z + dlt.z)) rig.position.z += dlt.z;
+      h.pull.moved += dlt.length();
+      h.lastP = handPoint(h, V3(0, 0, 0));
+    }
   }
 }
 /* ---------- viskamine ja füüsika ---------- */
@@ -2324,6 +2477,7 @@ function dropFall(h){
   h.held = null; placeItem(it, p, rand() * 6.28, fromY); sfx.drop();
 }
 function squeeze(h, down){
+  h.sq = down;
   if (mode !== 'play') return;
   if (down) {
     if (h.held) return;
@@ -2472,6 +2626,7 @@ function blocked(x, z){
 }
 let stepAcc = 0;
 function move(dt){
+  if (st.inSpace) return;
   let mx = 0, my = 0;
   if (!renderer.xr.isPresenting) {
     if (keys.KeyW || keys.ArrowUp) my -= 1; if (keys.KeyS || keys.ArrowDown) my += 1;
@@ -2559,6 +2714,7 @@ renderer.setAnimationLoop(() => {
   updateTweens(dt);
   trackHands(dt); updateDrags(); updatePhysics(dt);
   const curRoom = updateRoomVis();
+  updateSpace(dt, t);
   const hTgt = curRoom === 3 ? 0.12 : 1.1 + 1.1 * lightV; hemi.intensity += (hTgt - hemi.intensity) * Math.min(1, dt * 6); moon.intensity = curRoom === 3 ? 0 : 0.7;
   if (roomG[1].visible) updateScale(dt);
   if (!renderer.xr.isPresenting) aimMouseHolder();
