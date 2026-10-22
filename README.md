@@ -1,4 +1,4 @@
-[index (13).html](https://github.com/user-attachments/files/33786293/index.13.html)
+[Uploading index (14).html…]()
 <!doctype html>
 <html lang="et">
 <head>
@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <script>
 // Automaatne uuendus: kui serveris on uuem versioon, laadi see kohe
-window.GAME_VERSION = 'v9';
+window.GAME_VERSION = 'v11';
 (function(){
   try {
     var u = location.pathname + '?nocache=' + Date.now();
@@ -39,10 +39,10 @@ window.GAME_VERSION = 'v9';
 </head>
 <body>
 <div id="info">
-  <b>🔐 Põgenemistuba VR – Professor Nupu maja</b> <span style="opacity:.6">(v9)</span><br>
+  <b>🔐 Põgenemistuba VR – Professor Nupu maja</b> <span style="opacity:.6">(v11)</span><br>
   Questis: vajuta all <b>ENTER VR</b>.<br>
   Arvutis: <b>klõps</b> = kasuta / võta ese, <b>parem klõps</b> = pane ese maha,
-  <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>Esc</b> = paus.<br>
+  <b>lohista</b> = vaata ringi, <b>WASD</b> = liigu, <b>C</b> = kükita, <b>Esc</b> = paus.<br>
   <button id="tqBtn" style="margin-top:6px">📚 Õpetaja küsimused</button> <button id="galBtn">🖼️ Minu pildid</button>
   <div id="galBox" style="display:none;margin-top:6px;max-height:300px;overflow:auto"></div>
   <div id="tqBox" style="display:none;margin-top:6px">
@@ -522,15 +522,16 @@ for (const [x, z, w, d] of [[2.55, 0.2, 1.3, 2.0], [2.1, 2.5, 1.3, 0.9], [-2.2, 
   D(new THREE.BoxGeometry(0.92, 0.72, 0.02), M.brass, 0, 0, 0, g);
   makeIA(g, { onClick: () => notify('Ilus maal… aga selle taga pole midagi.') });
 }
-// raamaturiiul
-S(new THREE.BoxGeometry(0.02, 2.0, 2.0), M.woodDark, -2.97, 1.0, -0.5);
-for (const z of [-1.5, 0.5]) S(boxUV(0.36, 2.0, 0.03, 0.6), M.wood, -2.8, 1.0, z);
-for (const y of [0.06, 0.46, 0.86, 1.26, 1.66, 1.99]) S(boxUV(0.36, 0.03, 2.0, 0.6), M.wood, -2.8, y, -0.5);
-S(boxUV(0.25, 0.18, 0.3, 0.6), M.woodDark, -2.8, 0.165, 0.2);
+// raamaturiiul (liigub kõrvale, kui salanuppu vajutada)
+const shelfSlide = new THREE.Group(); roomG[0].add(shelfSlide);
+S(new THREE.BoxGeometry(0.02, 2.0, 2.0), M.woodDark, -2.97, 1.0, -0.5, shelfSlide);
+for (const z of [-1.5, 0.5]) S(boxUV(0.36, 2.0, 0.03, 0.6), M.wood, -2.8, 1.0, z, shelfSlide);
+for (const y of [0.06, 0.46, 0.86, 1.26, 1.66, 1.99]) S(boxUV(0.36, 0.03, 2.0, 0.6), M.wood, -2.8, y, -0.5, shelfSlide);
+S(boxUV(0.25, 0.18, 0.3, 0.6), M.woodDark, -2.8, 0.165, 0.2, shelfSlide);
 const BOOK_ROWS = [0.475, 0.875, 1.275, 1.675];
 const MUTED = ['#5d4037', '#6d4c41', '#4e342e', '#3e2723', '#455a64', '#37474f', '#795548', '#8d6e63', '#4a3b2a', '#5b5b4f', '#33413a', '#6b5b45', '#7b5e57', '#546e7a', '#5a4636', '#704a3a'];
 const COLS = [['PUNANE', '#d32f2f'], ['ROHELINE', '#2e9d3e'], ['SININE', '#1e6fd9'], ['KOLLANE', '#f2c21b'], ['VALGE', '#f2f2f2']];
-const shelfBooks = new THREE.Group(); roomG[0].add(shelfBooks);
+const shelfBooks = new THREE.Group(); shelfSlide.add(shelfBooks);
 function buildBooks(){
   for (const ch of [...shelfBooks.children]) { shelfBooks.remove(ch); removeFrom(statics, ch); removeFrom(interactives, ch); ch.geometry.dispose(); }
   const parts = [];
@@ -551,6 +552,112 @@ function buildBooks(){
   }
   const mesh = coloredMerge(parts); shelfBooks.add(mesh); statics.push(mesh);
 }
+
+/* =========================================================
+   🤫 SALATUBA raamaturiiuli taga: LASERLABÜRINT
+   ========================================================= */
+const secretG = new THREE.Group(); secretG.visible = false; roomG[0].add(secretG);
+const SEC = { x0: -9, x1: -3, z0: -3, z1: 3, dz0: -1.3, dz1: 0.3, dh: 2.0 };
+// toa 1 lääneseina auk
+{
+  const kill = [];
+  roomG[0].children.forEach(o => { if (!o.isMesh) return; const p = o.position; if ((Math.abs(p.x + 3) < 0.001 && Math.abs(p.y - 1.5) < 0.001) || Math.abs(p.x + 2.99) < 0.001 || (Math.abs(p.x + 2.975) < 0.01 && p.y < 2)) kill.push(o); });
+  kill.forEach(o => { o.visible = false; o.userData.hiddenWall = true; removeFrom(statics, o); });
+  const wm = M.wall, bm = M.wains;
+  const seg = (z0, z1, y0, y1, mat, x, faceX) => { const g = planeUV(z1 - z0, y1 - y0, 1).rotateY(faceX); const m = S(g, mat, x, (y0 + y1) / 2, (z0 + z1) / 2, roomG[0]); return m; };
+  seg(-3, SEC.dz0, 0, 3, wm, -3, Math.PI / 2); seg(SEC.dz1, 3, 0, 3, wm, -3, Math.PI / 2); seg(SEC.dz0, SEC.dz1, SEC.dh, 3, wm, -3, Math.PI / 2);
+  for (const [z0, z1] of [[-3, SEC.dz0], [SEC.dz1, 3]]) S(boxUV(0.02, 0.9, z1 - z0, 0.6, 0.9), bm, -2.99, 0.45, (z0 + z1) / 2, roomG[0]);
+}
+// salatoa kest
+{
+  const dark = new THREE.MeshLambertMaterial({ color: 0x2b2f3a, emissive: 0x0b0d12 });
+  const floorTex = canvasTex(256, 256, (c, W, H) => { c.fillStyle = '#1b1e26'; c.fillRect(0, 0, W, H); c.strokeStyle = '#3a4152'; c.lineWidth = 4; for (let i = 0; i <= W; i += 64) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, H); c.stroke(); c.beginPath(); c.moveTo(0, i); c.lineTo(W, i); c.stroke(); } });
+  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(3, 3);
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(6, 6).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ map: floorTex, emissive: 0x111111 })); fl.position.set(-6, 0, 0); secretG.add(fl); statics.push(fl);
+  const ce = new THREE.Mesh(new THREE.PlaneGeometry(6, 6).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x0c0d12 })); ce.position.set(-6, 3, 0); secretG.add(ce);
+  for (const [w, x, z, ry] of [[6, -9, 0, Math.PI / 2], [6, -6, -3, 0], [6, -6, 3, Math.PI]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 3), dark); m.position.set(x, 1.5, z); m.rotation.y = ry; secretG.add(m); statics.push(m); }
+  for (const [z0, z1, y0, y1] of [[-3, SEC.dz0, 0, 3], [SEC.dz1, 3, 0, 3], [SEC.dz0, SEC.dz1, SEC.dh, 3]]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(z1 - z0, y1 - y0), dark); m.rotation.y = -Math.PI / 2; m.position.set(-3.005, (y0 + y1) / 2, (z0 + z1) / 2); secretG.add(m); }
+  // punased hoiatusribad põrandal laserite all
+  for (const x of [-4.3, -5.2, -6.0, -6.8, -7.6]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x5a1010 })); m.position.set(x, 0.006, 0); secretG.add(m); }
+  const sign = litPlane(1.4, 0.3, 500, (c, W, H) => { c.fillStyle = '#b71c1c'; roundRect(c, 0, 0, W, H, 20); c.fill(); c.fillStyle = '#fff'; c.font = `bold ${H * 0.5}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('⚠️ LASERLABÜRINT ⚠️', W / 2, H / 2); });
+  sign.position.set(-8.98, 2.4, 0); sign.rotation.y = Math.PI / 2; secretG.add(sign);
+}
+const secLight = new THREE.PointLight(0xff6060, 0, 9, 1.5); secLight.position.set(-6, 2.6, 0); scene.add(secLight);
+// aardekirst
+const secChest = new THREE.Group(); secChest.position.set(-8.4, 0, -0.5); secChest.rotation.y = Math.PI / 2; secretG.add(secChest);
+{ const wm = new THREE.MeshLambertMaterial({ color: 0x8d5a2b, emissive: 0x2a1505 }), gm = new THREE.MeshLambertMaterial({ color: 0xffc107, emissive: 0x6d4c00 });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), wm); b.position.y = 0.25; secChest.add(b); statics.push(b);
+  for (const lx of [-0.3, 0.3]) { const st2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.52, 0.62), gm); st2.position.set(lx, 0.25, 0); secChest.add(st2); }
+  const lid = new THREE.Group(); lid.position.set(0, 0.5, -0.3); secChest.add(lid); secChest.userData.lid = lid;
+  const l = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.9, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), wm); l.position.z = 0.3; lid.add(l);
+  const gold = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.08, 16), gm); gold.position.set(0, 0.47, 0); gold.scale.z = 0.7; secChest.add(gold); secChest.userData.gold = gold;
+  makeIA(secChest, { onClick: () => openSecretChest() });
+}
+// salanupp: väike punane nupp riiuli kõrval, põlve kõrgusel
+const secretBtn = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.03), new THREE.MeshLambertMaterial({ color: 0xd32f2f, emissive: 0x330000 }));
+secretBtn.rotation.y = Math.PI / 2; secretBtn.position.set(-2.975, 0.4, 0.85); roomG[0].add(secretBtn);
+{ const ring = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.085, 0.085), M.brass); ring.position.set(-2.99, 0.4, 0.85); roomG[0].add(ring); }
+makeIA(secretBtn, { poke: true, scaleHover: true, onClick: () => openSecret() });
+function openSecret(){
+  if (st.secretOpen) { notify('Salakäik on juba lahti 🤫'); return; }
+  st.secretOpen = true; secretG.visible = true; sfx.unlock(); sfx.creak && sfx.creak();
+  secretBtn.position.x = -2.99; tone(90, 1.5, 0, 'sawtooth', 0.05);
+  tween(2.4, k => shelfSlide.position.z = 2.05 * ease(k), () => { rebuildColliders(); notify('🤫 Salakäik avanes! Riiuli taga on LASERLABÜRINT. Ära puuduta lasereid – KÜKITA nende alt!', 5); });
+  for (const h of xrHands) pulse(h, 0.6, 300);
+}
+function openSecretChest(){
+  if (st.secretLoot) return;
+  st.secretLoot = true; sfx.win(); tween(1, k => secChest.userData.lid.rotation.x = -1.7 * ease(k));
+  store('pt_coins', (store('pt_coins') || 0) + 5);
+  notify('💰 AARE! +5 🪙 münti rahakotti!', 4); unlockAch('secret');
+}
+// laserid (mängija pikkuse järgi)
+const secLasers = [
+  (t, H) => [V3(-4.3, H * 0.8, -3), V3(-4.3, H * 0.8, 3)],
+  (t, H) => { const z = Math.sin(t * 1.4) * 2.6; return [V3(-5.2, 0, z), V3(-5.2, 3, z)]; },
+  (t, H) => { const y = 1.55 + Math.sin(t * 0.9) * 0.9; return [V3(-6.0, y, -3), V3(-6.0, y, 3)]; },
+  (t, H) => { const z = Math.sin(t * 1.1 + 1.5) * 2.6; return [V3(-6.8, 0, z), V3(-6.8, 3, z)]; },
+  (t, H) => { const z = -Math.sin(t * 1.1 + 1.5) * 2.6; return [V3(-6.8, 0, z), V3(-6.8, 3, z)]; },
+  (t, H) => [V3(-7.6, H * 0.78, -3), V3(-7.6, H * 0.78, 3)],
+  (t, H) => { const z = Math.sin(t * 0.8) * 2.6; return [V3(-7.65, 0, z), V3(-7.65, 3, z)]; }
+].map(fn => {
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
+  const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1, 8), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }));
+  secretG.add(core); secretG.add(glow);
+  return { fn, core, glow, a: V3(0, 0, 0), b: V3(0, 0, 0) };
+});
+const SEC_START = [-3.6, -0.5];
+const secS = { H: 1.6, inv: 0, flash: 0 };
+function crouchY(){ return (!renderer.xr.isPresenting && (keys.KeyC || keys.ControlLeft)) ? 0.85 : 1.6; }
+function updateSecret(dt, t){
+  if (!renderer.xr.isPresenting) camera.position.y += (crouchY() - camera.position.y) * Math.min(1, dt * 10);
+  secLight.intensity = secretG.visible && roomG[0].visible ? 2 + secS.flash * 25 : 0;
+  secS.flash = Math.max(0, secS.flash - dt * 2);
+  if (!secretG.visible) return;
+  camera.getWorldPosition(head);
+  const inMaze = mode === 'play' && head.x < -3.4 && head.x > -8.0;
+  if (!inMaze) secS.H = renderer.xr.isPresenting ? Math.max(1.0, Math.min(2.0, camera.position.y)) : 1.6;   // mängija pikkus väljaspool labürinti
+  for (const L of secLasers) {
+    const [a, b] = L.fn(t, secS.H); L.a.copy(a); L.b.copy(b);
+    const mid = tmpV.copy(a).add(b).multiplyScalar(0.5), len = a.distanceTo(b);
+    for (const m of [L.core, L.glow]) { m.position.copy(mid); m.quaternion.setFromUnitVectors(UP, tmpD.copy(b).sub(a).normalize()); m.scale.set(1, len, 1); }
+  }
+  secS.inv -= dt;
+  if (!inMaze || secS.inv > 0) return;
+  const pts = [[head.clone(), 0.13], [V3(head.x, head.y - 0.25, head.z), 0.15], [V3(head.x, head.y - 0.6, head.z), 0.15]];
+  for (const h of xrHands) if (h.connected) pts.push([handPoint(h, V3(0, 0, 0)), 0.05]);
+  if (secLasers.some(L => pts.some(([p, r]) => segDist(p, L.a, L.b) < r))) {
+    secS.inv = 1.2; secS.flash = 1; st.secZaps = (st.secZaps || 0) + 1;
+    for (let i = 0; i < 4; i++) tone(i % 2 ? 660 : 880, 0.15, i * 0.15, 'square', 0.07);
+    for (const h of xrHands) pulse(h, 1, 250);
+    notify('🚨 ALARM! Laser! Tagasi algusesse', 2.5);
+    rig.position.x += SEC_START[0] - head.x; rig.position.z += SEC_START[1] - head.z;
+  }
+}
+function resetSecret(){
+  st.secretOpen = false; st.secretLoot = false; st.secZaps = 0; secretG.visible = false; shelfSlide.position.z = 0; secretBtn.position.x = -2.975; secChest.userData.lid.rotation.x = 0;
+}
+
 // kirjutuslaud + sahtel
 S(boxUV(0.83, 0.05, 1.6, 0.6), M.wood, 2.535, 0.755, 0.2);
 for (const [x, z] of [[2.17, -0.55], [2.9, -0.55], [2.17, 0.95], [2.9, 0.95]]) S(boxUV(0.06, 0.73, 0.06, 0.6), M.woodDark, x, 0.365, z);
@@ -1494,8 +1601,8 @@ function placeCoins(){
 }
 function collectCoin(i){
   const c = coins[i]; if (!c.visible || mode !== 'play') return;
-  c.visible = false; st.coins++; sweep(900, 1800, 0.2, 'square', 0.05); tone(1320, 0.15, 0.1, 'square', 0.05);
-  notify(`🪙 Salamünt! ${st.coins}/${coins.filter((_, j) => j < settings.rooms).length}`, 2.5);
+  c.visible = false; st.coins++; { const tot = (store('pt_coins') || 0) + 1; store('pt_coins', tot); if (tot >= 20) unlockAch('coins20'); } sweep(900, 1800, 0.2, 'square', 0.05); tone(1320, 0.15, 0.1, 'square', 0.05);
+  notify(`🪙 Salamünt! ${st.coins}/${coins.filter((_, j) => j < settings.rooms).length} • rahakotis ${wallet()} 🪙`, 2.5);
 }
 function updateCoins(t){
   if (mode !== 'play') return;
@@ -1514,7 +1621,8 @@ const ACH = [
   ['learn', '📚 Tarkpea', 'Läbi mäng õppimise režiimiga'],
   ['coins20', '💰 Rikas', 'Kogu kokku 20 salamünti (kõik mängud)'],
   ['night', '🌙 Öökull', 'Läbi mäng öörežiimis'],
-  ['photo', '📸 Fotograaf', 'Tee mängus endast pilt']
+  ['photo', '📸 Fotograaf', 'Tee mängus endast pilt'],
+  ['secret', '🤫 Salaagent', 'Leia salatuba ja läbi laserlabürint']
 ];
 const achGot = store('pt_ach') || {};
 function unlockAch(id){ if (achGot[id]) return; achGot[id] = Date.now(); store('pt_ach', achGot); const a = ACH.find(x => x[0] === id); delay(1.2 + Object.keys(achGot).length * 0.01, () => { notify(`🏅 Uus saavutus: ${a[1]}!`, 4); sfx.win ? tone(880, 0.3, 0, 'triangle', 0.08) : 0; }); }
@@ -1529,7 +1637,7 @@ function checkAch(){
   if (settings.rooms >= 8 && st.zaps === 0) unlockAch('laser');
   if (settings.learn !== 'off') unlockAch('learn');
   if (settings.night) unlockAch('night');
-  const tot = (store('pt_coins') || 0) + st.coins + (settings.diff === 'raske' ? 2 : 0); store('pt_coins', tot); if (tot >= 20) unlockAch('coins20');
+  const tot = (store('pt_coins') || 0) + (settings.diff === 'raske' ? 2 : 0); store('pt_coins', tot); if (tot >= 20) unlockAch('coins20');
 }
 function showAch(){
   if (mode === 'menu') { menuUI.visible = false; readerFromMenu = true; }
@@ -1977,7 +2085,7 @@ function drawShop(){
     panelBg(c, W, H); c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillStyle = '#ffd54f'; c.font = `bold ${H * 0.07}px ${FONT}`; c.fillText(`🛒 Pood • 🪙 ${wallet()}`, W / 2, H * 0.07);
     c.fillStyle = '#b0bec5'; c.font = `${H * 0.03}px ${FONT}`;
-    c.fillText('🪙 Mündid saad mängu lõpus • raskel tasemel +2', W / 2, H * 0.76); c.fillText('Riideid ja mütse näed 📸 selfie-kaameraga (paus → Kaamera)', W / 2, H * 0.81);
+    c.fillText('🪙 Mündid lähevad kohe rahakotti • raskel tasemel võit +2', W / 2, H * 0.76); c.fillText('Riideid ja mütse näed 📸 selfie-kaameraga (paus → Kaamera)', W / 2, H * 0.81);
   });
   tabBtns.forEach((b, i) => b.userData.paint(SHOP_TABS[i][0] === shopTab ? '#e65100' : '#37474f', undefined, SHOP_TABS[i][0] === shopTab));
   const list = SHOP[shopTab];
@@ -2221,7 +2329,7 @@ function applyPuzzle(){
   const n = settings.rooms;
   outsideBox.position.set(0, 1.15, ROOMS[n - 1].z0 - 0.65); outLight.position.set(0, 1.6, ROOMS[n - 1].z0 - 0.6); exitSign.position.set(0, 2.5, ROOMS[n - 1].z0 + 0.016);
   DOORS.forEach((d, i) => d.pivot.visible = i < n);
-  outsideBox.visible = exitSign.visible = n < 8; resetSpace(); resetWater();
+  outsideBox.visible = exitSign.visible = n < 8; resetSpace(); resetWater(); resetSecret();
   valves.forEach((v, i) => { v.rotation.x = 0; drawGauge(i); }); drawChalk();
   potDrawer.position.x = 0; plant.visible = false; plant.scale.setScalar(0.08); petals.forEach(p => p.rotation.z = 0);
   drawDial(); radioLamp.material.color.set(0x331100); drawMirrorText(); [0, 1, 2].forEach(drawCodeWheel);
@@ -3046,10 +3154,11 @@ const BASE_COLLIDERS = [
   [2.1, 3, -30.65, -29.35], [-2.6, -1.6, -32.1, -31.1], [-3, -2.65, -29.5, -28.3]
 ];
 let COLLIDERS = BASE_COLLIDERS.slice();
-function rebuildColliders(){ COLLIDERS = BASE_COLLIDERS.slice(); mirrors.forEach(m => { const x = m.g.position.x, z = m.g.position.z; COLLIDERS.push([x - 0.2, x + 0.2, z - 0.2, z + 0.2]); }); }
+function rebuildColliders(){ COLLIDERS = BASE_COLLIDERS.slice(); if (st && st.secretOpen) { COLLIDERS = COLLIDERS.filter(c => !(c[0] === -3 && c[2] === -1.55)); COLLIDERS.push([-3, -2.58, 0.45, 2.6]); } mirrors.forEach(m => { const x = m.g.position.x, z = m.g.position.z; COLLIDERS.push([x - 0.2, x + 0.2, z - 0.2, z + 0.2]); }); }
 function blocked(x, z){
   const r = 0.22;
   let ok = false;
+  if (st && st.secretOpen && ((x > -9 + r && x < -3 - 0.05 && z > -3 + r && z < 3 - r) || (x >= -3.3 && x <= -2.6 && z > SEC.dz0 + r && z < SEC.dz1 - r))) ok = true;
   for (const R of ROOMS.slice(0, settings.rooms)) if (x > -3 + r && x < 3 - r && z > R.z0 + r && z < R.z1 - r) ok = true;
   DOORS.forEach((d, i) => { if (st.door && st.door[i] && i < settings.rooms - 1 && Math.abs(x) < 0.33 && Math.abs(z - d.z) < 0.6) ok = true; });
   if (!ok) return true;
@@ -3146,7 +3255,7 @@ renderer.setAnimationLoop(() => {
   updateTweens(dt);
   trackHands(dt); updateDrags();
   const curRoom = updateRoomVis();
-  updateWater(dt, t); updateSpace(dt, t); updateCoins(t);
+  updateWater(dt, t); updateSpace(dt, t); updateCoins(t); updateSecret(dt, t);
   const hTgt = curRoom === 3 ? 0.12 : 1.1 + 1.1 * lightV; hemi.intensity += (hTgt - hemi.intensity) * Math.min(1, dt * 6); moon.intensity = curRoom === 3 ? 0 : 0.7;
   if (roomG[1].visible) updateScale(dt);
   if (!renderer.xr.isPresenting) aimMouseHolder();
